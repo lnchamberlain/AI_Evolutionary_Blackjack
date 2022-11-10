@@ -9,8 +9,9 @@
 #
 ################################################################################
 
-import player
+import Player
 import random
+import sys
 
 
 
@@ -157,8 +158,40 @@ def check_player_hand(player_hand):
         return total
 
 
+#Returns a random move depending on the mode (hard hard, soft hand, and pair)
+def generate_random_move(mode):
+    if(mode == "Hard Hand" or mode == "Soft Hand"):
+        move = random.choice(["S", "H", "D"]) 
+    if(mode == "Pair"):
+        move = random.choice(["P", "S", "H", "D"])
+    return move
+
+#Creates an array of Player objects with randomly filled strategy tables. Takes in an integer denoting how many players to create
+def generate_inital_population(num_players):
+    initial_population = []
+    for i in range(num_players):
+        initial_population.append(Player.player())
+
+    for player in initial_population:
+        #Fill Hard hand table
+        for row in player.STRATEGY_TABLE_HARD_HAND:        
+            for elem in player.STRATEGY_TABLE_HARD_HAND[row]:
+                player.STRATEGY_TABLE_HARD_HAND[row][elem] = generate_random_move("Hard Hand")
+        #Fill in Soft hand table
+        for row in player.STRATEGY_TABLE_SOFT_HAND:        
+            for elem in player.STRATEGY_TABLE_SOFT_HAND[row]:
+                player.STRATEGY_TABLE_SOFT_HAND[row][elem] = generate_random_move("Soft Hand")
+        #Fill in pairs tables
+        for row in player.STRATEGY_TABLE_PAIR:        
+            for elem in player.STRATEGY_TABLE_PAIR[row]:
+                player.STRATEGY_TABLE_PAIR[row][elem] = generate_random_move("Pair")
+
+    return initial_population
+
 def main():
     populate_deck()
+    generate_inital_population(20)
+    
 
 
 
