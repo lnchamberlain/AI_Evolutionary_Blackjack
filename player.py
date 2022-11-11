@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # Evolutionary Blackjack
 # Semester Project for CSCE A405 AI
 # Austin Edwards, Tuva Granoien, and Logan Chamberlain

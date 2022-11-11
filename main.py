@@ -1,4 +1,5 @@
 
+#!/usr/bin/env python
 #################################################################################
 # 
 # Evolutionary Blackjack
@@ -12,6 +13,12 @@
 import Player
 import random
 import sys
+import pandas as pd
+import matplotlib.pyplot as plt
+import dataframe_image as dfi
+import sys
+from PIL import Image, ImageFont, ImageDraw
+import os
 
 
 
@@ -25,11 +32,11 @@ PROVEN_STRATEGY_TABLE_HARD_HAND = {20:{2:"S", 3:"S", 4:"S", 5:"S", 6:"S", 7:"S",
                               17:{2:"S", 3:"S", 4:"S", 5:"S", 6:"S", 7:"S", 8:"S", 9:"S", 10:"S", "Ace":"S"},
                               16:{2:"S", 3:"S", 4:"S", 5:"S", 6:"S", 7:"H", 8:"H", 9:"H", 10:"H", "Ace":"H"},
                               15:{2:"S", 3:"S", 4:"S", 5:"S", 6:"S", 7:"H", 8:"H", 9:"H", 10:"H", "Ace":"H"},
-                              14:{2:"S", 3:"S", 4:"S", 5:"S", 6:"S", 7:"H", 8:"S", 9:"H", 10:"H", "Ace":"H"},
+                              14:{2:"S", 3:"S", 4:"S", 5:"S", 6:"S", 7:"H", 8:"H", 9:"H", 10:"H", "Ace":"H"},
                               13:{2:"S", 3:"S", 4:"S", 5:"S", 6:"S", 7:"H", 8:"H", 9:"H", 10:"H", "Ace":"H"},
                               12:{2:"H", 3:"H", 4:"S", 5:"S", 6:"S", 7:"H", 8:"H", 9:"H", 10:"H", "Ace":"H"},
                               11:{2:"D", 3:"D", 4:"D", 5:"D", 6:"D", 7:"D", 8:"D", 9:"D", 10:"D", "Ace":"D"},
-                              10:{2:"D", 3:"D", 4:"D", 5:"D", 6:"D", 7:"D", 8:"D", 9:"D", 10:"S", "Ace":"S"},
+                              10:{2:"D", 3:"D", 4:"D", 5:"D", 6:"D", 7:"D", 8:"D", 9:"D", 10:"H", "Ace":"H"},
                               9:{2:"H", 3:"D", 4:"D", 5:"D", 6:"D", 7:"H", 8:"H", 9:"H", 10:"H", "Ace":"H"}, 
                               8:{2:"H", 3:"H", 4:"H", 5:"H", 6:"H", 7:"H", 8:"H", 9:"H", 10:"H", "Ace":"H"},
                               7:{2:"H", 3:"H", 4:"H", 5:"H", 6:"H", 7:"H", 8:"H", 9:"H", 10:"H", "Ace":"H"},
@@ -63,6 +70,69 @@ POOL = 500 #Amount of money player starts with
 BET_AMOUNT = 2 #Bet $2 per hand
 DECK = []
 LIMIT = 1000 #Each generation plays until their Pool is 0 or Limit is reached
+OPTIMAL_PLAYER = None
+
+
+def _color_table(val):
+    color = ''
+    if(val == 'S'):
+        color = 'red'
+    elif(val == 'H'):
+        color = 'green'
+    elif(val == 'D'):
+        color = 'yellow'
+    elif(val == 'P'):
+        color = 'purple'
+    else:
+        color = 'white'
+    return 'background-color: %s' % color
+
+def visualize_strategy_tables(player, player_number, generation):
+    path = "./Strategy Table Images/Generation " + str(generation) + "/"
+    if not os.path.exists(path):
+        os.makedirs(path)
+    player_designation = str(player_number) + "_"
+
+    info_text = "Generation: " + str(generation) + "\nPlayer: "+ str(player_number) +"\nRemaining Funds: $"+ str(player.POOL)
+    font = ImageFont.truetype("arial.ttf", size=20)
+    info_img = Image.new('RGB', (300, 100), color=(255,255,255))
+    imgDraw = ImageDraw.Draw(info_img)
+    imgDraw.text((10,10), info_text, font=font, fill=(0,0,0))
+    info_img.save(path+player_designation+"info.png")
+
+    df_hard_hand = pd.DataFrame(player.STRATEGY_TABLE_HARD_HAND).T
+    df_hard_hand.style.set_table_attributes("style='display:inline'").set_caption('Hard Hand')
+    df_styled_hard_hand = df_hard_hand.style.applymap(_color_table)
+    dfi.export(df_styled_hard_hand,path+player_designation+"hard_hand.png")
+    
+    df_soft_hand = pd.DataFrame(player.STRATEGY_TABLE_SOFT_HAND).T
+    df_styled_soft_hand = df_soft_hand.style.applymap(_color_table)
+    dfi.export(df_styled_soft_hand,path+player_designation+"soft_hand.png")
+
+    df_pair = pd.DataFrame(player.STRATEGY_TABLE_PAIR).T
+    df_styled_pair = df_pair.style.applymap(_color_table)
+    dfi.export(df_styled_pair,path+player_designation+"pair.png")
+
+    images = [Image.open(x) for x in [path+player_designation+"hard_hand.png", path+player_designation+"soft_hand.png", path+player_designation+"pair.png"]]
+    widths, heights = zip(*(i.size for i in images))
+    total_width = sum(widths)
+    max_height = max(heights)
+    all_tables = Image.new('RGB', (total_width, max_height), color = (255, 255, 255))
+    info_img = Image.open(path+player_designation+"info.png")
+    x_offset = 0
+    PASTED_INFO = False
+    for im in images:
+        all_tables.paste(im, (x_offset,0))
+        if(x_offset != 0 and not PASTED_INFO):
+            all_tables.paste(info_img, (x_offset + 300, 400))
+            PASTED_INFO = True
+        x_offset += im.size[0]
+    file_name = path + "PLAYER " + str(player_number) + " RESULTS.png"
+    all_tables.save(file_name)
+    os.remove(path+player_designation+"hard_hand.png")
+    os.remove(path+player_designation+"soft_hand.png")
+    os.remove(path+player_designation+"pair.png")
+    os.remove(path+player_designation+"info.png")
 
 
 #Returns a random card from the populated deck
@@ -190,7 +260,17 @@ def generate_inital_population(num_players):
 
 def main():
     populate_deck()
-    generate_inital_population(20)
+    global OPTIMAL_PLAYER
+    OPTIMAL_PLAYER = Player.player()
+    OPTIMAL_PLAYER.STRATEGY_TABLE_HARD_HAND = PROVEN_STRATEGY_TABLE_HARD_HAND
+    OPTIMAL_PLAYER.STRATEGY_TABLE_SOFT_HAND = PROVEN_STRATEGY_TABLE_SOFT_HAND
+    OPTIMAL_PLAYER.STRATEGY_TABLE_PAIR = PROVEN_STRATEGY_TABLE_PAIR
+    visualize_strategy_tables(OPTIMAL_PLAYER, "OPTIMAL", "OPTIMAL")
+    init_pop = generate_inital_population(5)
+    for i in range(len(init_pop)):
+        visualize_strategy_tables(init_pop[i], i+1, 1)
+
+
     
 
 
