@@ -224,9 +224,35 @@ def hit(player):
     player.hand.append(get_random_card())
 
 
-#ACTION: 
-def double_down():
-    print("STUB")
+#ACTION: Double Down. Player hits one more time and bets a doubled amount. After hitting one more, procedure is the same as stand (see above)
+def double_down(player, dealer_hand):
+    doubled_bet = 2 * BET_AMOUNT
+    hit(player)
+    player_total = check_player_hand(player)
+    dealer_total, dealer_hand = get_dealer_hand(dealer_hand)
+    if(dealer_total == "Bust"):
+        print("Dealer Hand: {}\nPlayer Hand: {}".format(dealer_hand, player.hand))
+        print("Player wins, dealer bust")
+        player.POOL += doubled_bet
+        return True
+    if(player_total == "Bust"):
+        print("Dealer Hand: {}\nPlayer Hand: {}".format(dealer_hand, player.hand))
+        print("Player Lose, Bust")
+        player.POOL -= doubled_bet
+        return False
+    player_diff = 21 - player_total 
+    dealer_diff = 21 - dealer_total 
+    if(player_diff < dealer_diff):
+        print("Dealer Hand: {}\nPlayer Hand: {}".format(dealer_hand, player.hand))
+        print("Player Wins")
+        player.POOL += doubled_bet
+        return True
+    else:
+        print("Dealer Hand: {}\nPlayer Hand: {}".format(dealer_hand, player.hand))
+        print("Player Lose")
+        player.POOL -= doubled_bet
+        return False
+
 
 def split():
     print("STUB")
