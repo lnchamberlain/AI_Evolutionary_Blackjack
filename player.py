@@ -12,7 +12,6 @@
 
 class player():
     def __init__(self):
-        self.POOL = 500 #player money
         #Strategy tables are empty at initalization
         self.STRATEGY_TABLE_HARD_HAND = {20:{2:"", 3:"", 4:"", 5:"", 6:"", 7:"", 8:"", 9:"", 10:"", "Ace":""}, 
                               19:{2:"", 3:"", 4:"", 5:"", 6:"", 7:"", 8:"", 9:"", 10:"", "Ace":""},
@@ -50,8 +49,13 @@ class player():
                                    "4-4":{2:"", 3:"", 4:"", 5:"", 6:"", 7:"", 8:"", 9:"", 10:"", "Ace":""},
                                    "3-3":{2:"", 3:"", 4:"", 5:"", 6:"", 7:"", 8:"", 9:"", 10:"", "Ace":""},
                                    "2-2":{2:"", 3:"", 4:"", 5:"", 6:"", 7:"", 8:"", 9:"", 10:"", "Ace":""}}
-        self.hand = []
         self.hands_played = 0
+        self.POOL = 500
+        self.done_with_hand = False
+        self.BET_AMOUNT = 2
+        self.hand = []
+        self.has_split = False
+        self.split_card = None
         
                                    
 
