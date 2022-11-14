@@ -272,6 +272,7 @@ def split(player):
     play_hand(player)
     
 
+
 #Checks if player has exceeded 21, returns "BUST" if so and returns the total value of their cards if not
 def check_player_hand(player_hand):
     total = 0
