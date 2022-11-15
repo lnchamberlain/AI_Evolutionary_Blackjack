@@ -157,12 +157,18 @@ def check_naturals(deal):
     dealer_val_one = get_card_value(dealer_hand[0])
     dealer_val_two = get_card_value(dealer_hand[1])
     dealer_sum = dealer_val_one + dealer_val_two
+    # when playing final version (not when training AI) we want to update the pool accordingly 
     if(player_sum == 21 and dealer_sum != 21):
-        return "Player"
+        # the player normally earns 3/2 odds -> on a $2 bet, $3 is earned (+$1) instead of the normal $4 (+$2)
+        # player.POOL += (0.5 * player.BET_AMOUNT)
+        return "Player Blackjack: Player Win"
     if(player_sum != 21 and dealer_sum == 21):
-        return "Dealer"
+        # the player looses normally
+        # player.POOL -= player.BET_AMOUNT
+        return "Dealer BlackJack: Player Lose"
     if(player_sum == 21 and dealer_sum == 21):
-        return "Tie"
+        # the bet is a "push", no money exchanged
+        return "Player and Dealer Blackjack: Push"
     else:
         return None
 
@@ -173,8 +179,7 @@ def get_card_value(card):
     card = card.split(" of ")
     value = card[0]
     if(value == "Ace"):
-        #Ace can be either 1 or 11 
-        #return "Ace"
+        #Function only used in check_naturals(), ace should default to 11 to make blackjack
         return 11
     if(value == "King" or value == "Queen" or value == "Jack"):
         return 10
@@ -208,6 +213,8 @@ def hit(player):
 def double_down(player):
     if len(player.hand) != 2:
         print("Error: can only double down with 2 cards")
+        # if the AIs table says double and you have 3 cards, Hit instead
+        Hit(player)
         return None
     player.BET_AMOUNT = 2 * player.BET_AMOUNT
     print("Doubling Down with bet: $" + str(player.BET_AMOUNT))
@@ -215,8 +222,9 @@ def double_down(player):
     player.done_with_hand = True
 
 
-#Checks if there is a pair and player has not split.  Stores pair value so it can evaluate the hands individually
+#ACTION: Checks if there is a pair and player has not split.  Stores pair value so it can evaluate the hands individually
 def split(player, dealer_hand):
+    # many of these tests can be removed when we decide if the AIs hand is a hard hand, soft hand, or pair
     if len(player.hand) != 2:
         print("Error: Can only split with 2 cards")
         return None
@@ -243,7 +251,7 @@ def split(player, dealer_hand):
     player.hand.append(player.split_card)
     player.hand.append(get_random_card())
     # play hand #2
-    # plays second hand when it exits into play_hand fxn
+    # plays second hand when it exits into play_hand() function
     
 
 
@@ -259,14 +267,14 @@ def check_player_hand(player_hand):
             else:
                 total += int(value)
         else:
-            #If Ace, use 11 unless that makes the player go over, then use 1
+            # If Ace, use 11 unless that makes the player go over, then use 1
             total += 1
-    # after evaluated total with aces = 1, check to see if they can be 11 without busting
+    # After evaluated total with aces = 1, check to see if they can be 11 without busting
     for card in player_hand:
         card = card.split(" of ")
         value = card[0]
         if value == "Ace":
-            total -= 1
+            total -= 1 # This temporarily deletes the ace from the total for readability
             if(total + 11 > 21):
                 total += 1
             else:
@@ -280,6 +288,8 @@ def check_player_hand(player_hand):
  #As per the game rules, the dealer hits automatically if the total is under 17 and stands automatically if over 17 but under 21. Bust if 21 or over
 def get_dealer_hand(dealer_hand):
     total = check_player_hand(dealer_hand)
+    # this is assuming the dealer is playing by Soft-17 rules (dealer must stand on a soft 17 e.g., [Ace, 6], [2, 4, Ace])
+    # Solf-17 gives the dealer a slight advantage
     while (total != "BUST") and (total < 17):
         dealer_hand.append(get_random_card())
         total = check_player_hand(dealer_hand)
@@ -291,6 +301,10 @@ def play_hand(player, dealer_hand):
     while not player.done_with_hand:
         # choose action from randomized table
         # Hit, stand, double down, or split based on soft-hand, hard-hand, or pair
+        # Need to put some logic in place in some of the following situations:
+        # default to HIT if double cannot be done, implemented in double function
+        # 6-Ace is soft as well as a 6-3-Ace (9-Ace), but 10-Ace is 21 by default -> player.done_with_hand, 11-Ace, 12-Ace, 13-Ace... and up is a hard-12, hard-13, hard-14...
+        # A-A is a pair, not a soft or hard hand
         print("Player Hand: {}".format(player.hand) + " Total: " + str(check_player_hand(player.hand)))
         action = input("Enter your action (H,S,D,P): ")
         if action == 'H':
@@ -341,7 +355,6 @@ def evaluate_hands(player, dealer_hand):
  #Resets values of player.  i.e. if you double down, the next hand is reset to a bet of $2
 def reset_player(player):
     player.BET_AMOUNT = 2
-    player.total = 0
     player.hand = []
     player.has_split = False
     player.split_card = None
@@ -397,8 +410,6 @@ def main():
     keep_playing = 'y'
     test_player = Player.player()
     while keep_playing == 'y':
-        DECK.clear()    
-        populate_deck()
         dealers_hand = []
         result = None
         [test_player.hand, dealer_hand] = deal()
