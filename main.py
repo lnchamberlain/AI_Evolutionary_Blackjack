@@ -208,60 +208,34 @@ def hit(player):
 def double_down(player):
     if len(player.hand) != 2:
         print("Error: can only double down with 2 cards")
-    player.BET_AMOUNT = 2 * BET_AMOUNT
+        return None
+    player.BET_AMOUNT = 2 * player.BET_AMOUNT
     print("Doubling Down with bet: $" + str(player.BET_AMOUNT))
     hit(player)
     player.done_with_hand = True
 
 
-def evaluate_hands(player, dealer_hand):
-    player_total = check_player_hand(player.hand)
-    dealer_total, dealer_hand = get_dealer_hand(dealer_hand)
-    if(player_total == "BUST"):
-        print("Dealer Hand: {}\nPlayer Hand: {}".format(dealer_hand, player.hand))
-        print("Player Lose, Bust")
-        player.POOL -= player.BET_AMOUNT
-        return False
-    if(dealer_total == "BUST"):
-        print("Dealer Hand: {}\nPlayer Hand: {}".format(dealer_hand, player.hand))
-        print("Player wins, dealer bust")
-        player.POOL += player.BET_AMOUNT
-        return True
-    player_diff = 21 - player_total 
-    dealer_diff = 21 - dealer_total 
-    if(player_diff < dealer_diff):
-        print("Dealer Hand: {}\nPlayer Hand: {}".format(dealer_hand, player.hand))
-        print("Player Wins")
-        player.POOL += player.BET_AMOUNT
-        return True
-    else:
-        print("Dealer Hand: {}\nPlayer Hand: {}".format(dealer_hand, player.hand))
-        print("Player Lose")
-        player.POOL -= player.BET_AMOUNT
-        return False
-
-
 #Checks if there is a pair and player has not split.  Stores pair value so it can evaluate the hands individually
-def split(player):
+def split(player, dealer_hand):
     if len(player.hand) != 2:
         print("Error: Can only split with 2 cards")
         return None
-    player_val_one = get_card_value(player.hand[0])
-    player_val_two = get_card_value(player.hand[1])
-    if player_val_one != player_val_two:
+    card_1 = player.hand[0].split(" of ")
+    card_2 = player.hand[1].split(" of ")
+    if card_1[0] != card_2[0]:
         print("Error: Cannot split with no pair")
         return None
     if player.has_split is True:
         print("Error: Cannor split twice")
         return None
     # store some split information: Bool, split card value, and bet amount
-    player.has_split is True
+    player.has_split = True
     player.split_card = player.hand[1]
     player.BET_AMOUNT = 1
     player.hand.pop(1)
     player.hand.append(get_random_card())
     # play hand #1
-    play_hand(player)
+    play_hand(player, dealer_hand)    
     # reset bet_amount and create second hand
     player.BET_AMOUNT = 1
     player.done_with_hand = False
@@ -269,7 +243,7 @@ def split(player):
     player.hand.append(player.split_card)
     player.hand.append(get_random_card())
     # play hand #2
-    play_hand(player)
+    # plays second hand when it exits into play_hand fxn
     
 
 
@@ -286,6 +260,13 @@ def check_player_hand(player_hand):
                 total += int(value)
         else:
             #If Ace, use 11 unless that makes the player go over, then use 1
+            total += 1
+    # after evaluated total with aces = 1, check to see if they can be 11 without busting
+    for card in player_hand:
+        card = card.split(" of ")
+        value = card[0]
+        if value == "Ace":
+            total -= 1
             if(total + 11 > 21):
                 total += 1
             else:
@@ -306,11 +287,11 @@ def get_dealer_hand(dealer_hand):
 
 
  #Checks action the AI will take until "done with hand"
-def play_hand(player):
+def play_hand(player, dealer_hand):
     while not player.done_with_hand:
         # choose action from randomized table
         # Hit, stand, double down, or split based on soft-hand, hard-hand, or pair
-        print("Player Hand: {}".format(player.hand))
+        print("Player Hand: {}".format(player.hand) + " Total: " + str(check_player_hand(player.hand)))
         action = input("Enter your action (H,S,D,P): ")
         if action == 'H':
             hit(player)
@@ -319,12 +300,42 @@ def play_hand(player):
         elif action == 'D':
             double_down(player)
         elif action == 'P':
-            split(player)
+            split(player, dealer_hand)
 
-        if check_player_hand(player.hand) == "BUST":
+        if check_player_hand(player.hand) == "BUST" or check_player_hand(player.hand) == 21:
             player.done_with_hand = True
+    
+    #need to evaluate inside this function since split has 2 calls to play_hand
+    evaluate_hands(player, dealer_hand)
+    print("Balance: " + str(player.POOL))
 
 
+ #Evaluates Hands after play is complete, prints winner, and returns True or False for a Win
+def evaluate_hands(player, dealer_hand):
+    player_total = check_player_hand(player.hand)
+    dealer_total, dealer_hand = get_dealer_hand(dealer_hand)
+    if(player_total == "BUST"):
+        print("Dealer Hand: {}  Total: {}\nPlayer Hand: {}  Total: {}".format(dealer_hand, dealer_total, player.hand, player_total))
+        print("Player Lose, Bust")
+        player.POOL -= player.BET_AMOUNT
+        return False
+    if(dealer_total == "BUST"):
+        print("Dealer Hand: {}  Total: {}\nPlayer Hand: {}  Total: {}".format(dealer_hand, dealer_total, player.hand, player_total))
+        print("Player wins, dealer bust")
+        player.POOL += player.BET_AMOUNT
+        return True
+    player_diff = 21 - player_total 
+    dealer_diff = 21 - dealer_total 
+    if(player_diff < dealer_diff):
+        print("Dealer Hand: {}  Total: {}\nPlayer Hand: {}  Total: {}".format(dealer_hand, dealer_total, player.hand, player_total))
+        print("Player Wins")
+        player.POOL += player.BET_AMOUNT
+        return True
+    else:
+        print("Dealer Hand: {}  Total: {}\nPlayer Hand: {}  Total: {}".format(dealer_hand, dealer_total, player.hand, player_total))
+        print("Player Lose")
+        player.POOL -= player.BET_AMOUNT
+        return False
 
 
  #Resets values of player.  i.e. if you double down, the next hand is reset to a bet of $2
@@ -335,7 +346,6 @@ def reset_player(player):
     player.has_split = False
     player.split_card = None
     player.done_with_hand = False
-
 
 
 #Returns a random move depending on the mode (hard hard, soft hand, and pair)
@@ -392,17 +402,16 @@ def main():
         dealers_hand = []
         result = None
         [test_player.hand, dealer_hand] = deal()
-        print("Dealer Hand: {}\nPlayer Hand: {}".format(dealer_hand[0], test_player.hand))
+        print("Dealer Hand: {}".format(dealer_hand[0]))
         result = check_naturals([test_player.hand, dealer_hand])
         if not result:
-            play_hand(test_player)
-            evaluate_hands(test_player, dealer_hand)
+            play_hand(test_player, dealer_hand)
         else:
             print(result)
-        print("Balance: " + str(test_player.POOL))
+            print("Balance: " + str(test_player.POOL))
+
         keep_playing = input("Keep Playing? (y/n): ")
         reset_player(test_player)
-
 
 if __name__ == "__main__":
     main()
