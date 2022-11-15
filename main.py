@@ -159,8 +159,8 @@ def check_naturals(deal):
     dealer_sum = dealer_val_one + dealer_val_two
     # when playing final version (not when training AI) we want to update the pool accordingly 
     if(player_sum == 21 and dealer_sum != 21):
-        # the player normally earns 3/2 odds -> on a $2 bet, $3 is earned (+$1) instead of the normal $4 (+$2)
-        # player.POOL += (0.5 * player.BET_AMOUNT)
+        # the player normally earns 3/2 odds -> on a $2 bet, +$3 is earned instead of the normal +$2
+        # player.POOL += (1.5 * player.BET_AMOUNT)
         return "Player Blackjack: Player Win"
     if(player_sum != 21 and dealer_sum == 21):
         # the player looses normally
@@ -302,9 +302,11 @@ def play_hand(player, dealer_hand):
         # choose action from randomized table
         # Hit, stand, double down, or split based on soft-hand, hard-hand, or pair
         # Need to put some logic in place in some of the following situations:
-        # default to HIT if double cannot be done, implemented in double function
+        # default to HIT if double cannot be done (more than 2 cards), implemented in double function
         # 6-Ace is soft as well as a 6-3-Ace (9-Ace), but 10-Ace is 21 by default -> player.done_with_hand, 11-Ace, 12-Ace, 13-Ace... and up is a hard-12, hard-13, hard-14...
         # A-A is a pair, not a soft or hard hand
+        # need to deal with already_split to appropriate soft or hard hand within this function: e.g., draw 7,7     -> split -> first hand = 7,   draw 7   -> this is a hard 14 
+        # After splitting aces, limit to 1 hit per hand
         print("Player Hand: {}".format(player.hand) + " Total: " + str(check_player_hand(player.hand)))
         action = input("Enter your action (H,S,D,P): ")
         if action == 'H':
