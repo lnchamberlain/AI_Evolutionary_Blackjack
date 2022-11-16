@@ -57,6 +57,8 @@ class player():
         self.hand = []
         self.has_split = False
         self.split_card = None
+        self.generation = 0
+        self.player_number = 0
         
                                    
 

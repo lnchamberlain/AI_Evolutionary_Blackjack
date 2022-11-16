@@ -19,6 +19,7 @@ import dataframe_image as dfi
 import sys
 from PIL import Image, ImageFont, ImageDraw
 import os
+import time
 
 
 
@@ -68,6 +69,7 @@ BET_AMOUNT = 2 #Bet $2 per hand
 DECK = []
 LIMIT = 1000 #Each player plays until their Pool is 0 or Limit is reached
 OPTIMAL_PLAYER = None
+VICTOR_RESULTS_LIST = []
 
 
 def _color_table(val):
@@ -162,7 +164,7 @@ def check_naturals(deal):
     if(player_sum != 21 and dealer_sum == 21):
         return "Dealer"
     if(player_sum == 21 and dealer_sum == 21):
-        return "Tie"
+        return "Both"
     else:
         return None
 
@@ -208,6 +210,7 @@ def hit(player):
 def double_down(player):
     if len(player.hand) != 2:
         print("Error: can only double down with 2 cards")
+        reset_player(player)
         return None
     player.BET_AMOUNT = 2 * player.BET_AMOUNT
     print("Doubling Down with bet: $" + str(player.BET_AMOUNT))
@@ -219,14 +222,16 @@ def double_down(player):
 def split(player, dealer_hand):
     if len(player.hand) != 2:
         print("Error: Can only split with 2 cards")
-        return None
+        reset_player(player)
     card_1 = player.hand[0].split(" of ")
     card_2 = player.hand[1].split(" of ")
     if card_1[0] != card_2[0]:
         print("Error: Cannot split with no pair")
+        reset_player(player)
         return None
     if player.has_split is True:
-        print("Error: Cannor split twice")
+        print("Error: Cannot split twice")
+        reset_player(player)
         return None
     # store some split information: Bool, split card value, and bet amount
     player.has_split = True
@@ -246,6 +251,20 @@ def split(player, dealer_hand):
     # plays second hand when it exits into play_hand fxn
     
 
+#Get a single cards value 
+def get_single_card_val(card):
+    print(card)
+    l = card.split(" of ")
+    value = l[0]
+    if value != "Ace":
+            if(value == "King" or value == "Queen" or value == "Jack"):
+                total = 10
+            else:
+                total = int(value)
+    else:
+            #If Ace, use 11 unless that makes the player go over, then use 1
+            total = "Ace"
+    return total
 
 #Checks if player has exceeded 21, returns "BUST" if so and returns the total value of their cards if not
 def check_player_hand(player_hand):
@@ -292,7 +311,36 @@ def play_hand(player, dealer_hand):
         # choose action from randomized table
         # Hit, stand, double down, or split based on soft-hand, hard-hand, or pair
         print("Player Hand: {}".format(player.hand) + " Total: " + str(check_player_hand(player.hand)))
-        action = input("Enter your action (H,S,D,P): ")
+        #TODO, do we check for an ace and a face card or automatic win before we reach this point?
+        #Soft hand condtion
+        card_one = player.hand[0]
+        card_two = player.hand[1]
+        action = ''
+        if('Ace' in player.hand):
+            #Get the value of the card that is not an ace
+            if('Ace' not in player.hand[0]):
+                card_val = get_single_card_val([player.hand[0]])
+            else:
+                card_val = get_single_card_val([player.hand[1]])
+            action = player.STRATEGY_TABLE_SOFT_HAND["A-" + str(card_val)][get_single_card_val(dealer_hand[0])]
+        #Pair condition
+       
+        elif(card_one == card_two):
+            if('Ace' in card_one):
+                card_val = get_single_card_val(player.hand[0])
+                if(card_val == "Ace"):
+                    action = player.STRATEGY_TABLE_PAIR["A-A"][get_single_card_val(dealer_hand)]
+                if(card_val == 10):
+                    action = player.STRATEGY_TABLE_PAIR["T-T"][get_single_card_val(dealer_hand)]
+                else:
+                    action = player.STRATEGY_TABLE_PAIR[str(card_val) + "-" + str(card_val)][get_single_card_val(dealer_hand[0])]
+        #Hard hand condtion
+        else:
+            card_sum = check_player_hand(player.hand)
+            action = player.STRATEGY_TABLE_HARD_HAND[card_sum][get_single_card_val(dealer_hand[0])]
+
+            
+        #action = input("Enter your action (H,S,D,P): ")
         if action == 'H':
             hit(player)
         elif action == 'S':
@@ -341,7 +389,6 @@ def evaluate_hands(player, dealer_hand):
  #Resets values of player.  i.e. if you double down, the next hand is reset to a bet of $2
 def reset_player(player):
     player.BET_AMOUNT = 2
-    player.total = 0
     player.hand = []
     player.has_split = False
     player.split_card = None
@@ -355,7 +402,6 @@ def generate_random_move(mode):
     if(mode == "Pair"):
         move = random.choice(["P", "S", "H", "D"])
     return move
-
 
 #Creates an array of Player objects with randomly filled strategy tables. Takes in an integer denoting how many players to create
 def generate_inital_population(num_players):
@@ -380,6 +426,29 @@ def generate_inital_population(num_players):
     return initial_population
 
 
+
+
+#Plays a game with a player until 1000 hands or player pool is 0
+def play_game(generation_list, player):
+    counter = 0
+    global PLAYER_RESULTS_LIST
+    while((counter < LIMIT) and player.POOL > 0):
+        [player.hand, dealer_hand] = deal()
+        print("Dealer Hand: {}".format(dealer_hand[0]))
+        result = check_naturals([player.hand, dealer_hand])
+        if not result:
+            play_hand(player, dealer_hand)
+        else:
+            print(result + " had naturals")
+            print("Balance: " + str(player.POOL))
+        counter += 1
+    #Build array of result information to determine victors
+    generation_list.append([player.player_number, player.POOL, player])
+    return generation_list
+        
+
+
+
 def main():
     populate_deck()
     global OPTIMAL_PLAYER
@@ -388,11 +457,25 @@ def main():
     OPTIMAL_PLAYER.STRATEGY_TABLE_SOFT_HAND = PROVEN_STRATEGY_TABLE_SOFT_HAND
     OPTIMAL_PLAYER.STRATEGY_TABLE_PAIR = PROVEN_STRATEGY_TABLE_PAIR
     visualize_strategy_tables(OPTIMAL_PLAYER, "OPTIMAL", "OPTIMAL")
-    init_pop = generate_inital_population(1)
-    for i in range(len(init_pop)):
-        visualize_strategy_tables(init_pop[i], i+1, 1)
+    init_pop = generate_inital_population(10)
+    print(init_pop)
+    #Fill in generation info and player numbers 
+    for i in range(10):
+        init_pop[i].generation = 0
+        init_pop[i].player_number = i + 1
+    
+    generation_0_list = []
+    #Play inital players   
+    for player in init_pop:
+        generation_0_list = play_game(generation_0_list, player)
+        print(f"Player {player.player_number} Final Pool: {player.POOL}")
+    print("DONE")
+    print(generation_0_list)
+
+           
 
 
+    '''
     # testing play
     keep_playing = 'y'
     test_player = Player.player()
@@ -412,6 +495,7 @@ def main():
 
         keep_playing = input("Keep Playing? (y/n): ")
         reset_player(test_player)
+        '''
 
 if __name__ == "__main__":
     main()
