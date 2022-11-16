@@ -21,7 +21,6 @@ from PIL import Image, ImageFont, ImageDraw
 import os
 
 
-
 #NOTE: The dealer has an infinite deck for the purposes of our algorithm
 
 #Proven strategy tables data sourced from: https://towardsdatascience.com/winning-blackjack-using-machine-learning-681d924f197c
@@ -216,6 +215,10 @@ def double_down(player):
         # if the AIs table says double and you have 3 cards, Hit instead
         Hit(player)
         return None
+    if player.has_split:
+        print("Error: cannot double after split")
+        Hit(player)
+        return None
     player.BET_AMOUNT = 2 * player.BET_AMOUNT
     print("Doubling Down with bet: $" + str(player.BET_AMOUNT))
     hit(player)
@@ -233,19 +236,17 @@ def split(player, dealer_hand):
     if card_1[0] != card_2[0]:
         print("Error: Cannot split with no pair")
         return None
-    if player.has_split is True:
+    if player.has_split:
         print("Error: Cannor split twice")
         return None
-    # store some split information: Bool, split card value, and bet amount
+    # store some split information: Bool, split card value, and create first hand
     player.has_split = True
     player.split_card = player.hand[1]
-    player.BET_AMOUNT = 1
     player.hand.pop(1)
     player.hand.append(get_random_card())
     # play hand #1
     play_hand(player, dealer_hand)    
-    # reset bet_amount and create second hand
-    player.BET_AMOUNT = 1
+    # Create second hand
     player.done_with_hand = False
     player.hand.clear()
     player.hand.append(player.split_card)
@@ -346,6 +347,10 @@ def evaluate_hands(player, dealer_hand):
         print("Dealer Hand: {}  Total: {}\nPlayer Hand: {}  Total: {}".format(dealer_hand, dealer_total, player.hand, player_total))
         print("Player Wins")
         player.POOL += player.BET_AMOUNT
+        return True
+    elif(player_diff == dealer_diff):
+        print("Dealer Hand: {}  Total: {}\nPlayer Hand: {}  Total: {}".format(dealer_hand, dealer_total, player.hand, player_total))
+        print("Push")
         return True
     else:
         print("Dealer Hand: {}  Total: {}\nPlayer Hand: {}  Total: {}".format(dealer_hand, dealer_total, player.hand, player_total))
