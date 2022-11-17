@@ -66,7 +66,6 @@ PROVEN_STRATEGY_TABLE_PAIR = {"A-A":{2:"P", 3:"P", 4:"P", 5:"P", 6:"P", 7:"P", 8
 
 BET_AMOUNT = 2 #Bet $2 per hand
 DECK = []
-LIMIT = 1000 #Each player plays until their Pool is 0 or Limit is reached
 OPTIMAL_PLAYER = None
 VICTOR_RESULTS_LIST = []
 
@@ -215,11 +214,11 @@ def double_down(player):
     if len(player.hand) != 2:
         print("Error: can only double down with 2 cards")
         # if the AIs table says double and you have 3 cards, Hit instead
-        Hit(player)
+        hit(player)
         return None
     if player.has_split:
         print("Error: cannot double after split")
-        Hit(player)
+        hit(player)
         return None
     player.BET_AMOUNT = 2 * player.BET_AMOUNT
     print("Doubling Down with bet: $" + str(player.BET_AMOUNT))
@@ -232,12 +231,14 @@ def split(player, dealer_hand):
     # many of these tests can be removed when we decide if the AIs hand is a hard hand, soft hand, or pair
     if len(player.hand) != 2:
         print("Error: Can only split with 2 cards")
-        reset_player(player)
+        return none
+        #reset_player(player)
     card_1 = player.hand[0].split(" of ")
     card_2 = player.hand[1].split(" of ")
     if card_1[0] != card_2[0]:
         print("Error: Cannot split with no pair")
-        reset_player(player)
+        return none
+        #reset_player(player)
         return None
     if player.has_split:
         print("Error: Cannor split twice")
@@ -316,6 +317,13 @@ def get_dealer_hand(dealer_hand):
 
  #Checks action the AI will take until "done with hand"
 def play_hand(player, dealer_hand):
+    count = 10
+
+    if player.has_split:
+        if check_player_hand(player.hand) == 21:
+            player.done_with_hand = True
+    
+
     while not player.done_with_hand:
         # choose action from randomized table
         # Hit, stand, double down, or split based on soft-hand, hard-hand, or pair
@@ -330,25 +338,34 @@ def play_hand(player, dealer_hand):
         #Soft hand condtion
         card_one = player.hand[0]
         card_two = player.hand[1]
+        card_one_rank = player.hand[0].split(" of ")
+        card_two_rank = player.hand[1].split(" of ")
+
         action = ''
-        if('Ace' in player.hand):
+
+        # pause condition if repeated 10 times
+        if count == 0:
+            keep_playing = input("pause")
+        count -= 1
+
+        #Pair condition: check this first so we dont need to check for 2 aces in soft-hand    
+        if(card_one_rank[0] == card_two_rank[0]) and not player.has_split:
+            if(card_one_rank[0] == 'Ace'):
+                action = player.STRATEGY_TABLE_PAIR["A-A"][get_single_card_val(dealer_hand[0])]
+            elif(card_one_rank[0] == '10' or card_one_rank[0] == 'Jack' or card_one_rank[0] == 'Queen' or card_one_rank[0] == 'King'):
+                action = player.STRATEGY_TABLE_PAIR["T-T"][get_single_card_val(dealer_hand[0])]
+            else:
+                card_val = get_single_card_val(player.hand[0])
+                action = player.STRATEGY_TABLE_PAIR[str(card_val) + "-" + str(card_val)][get_single_card_val(dealer_hand[0])]
+
+        elif 'Ace' in player.hand:
             #Get the value of the card that is not an ace
-            if('Ace' not in player.hand[0]):
+            if 'Ace' not in player.hand[0]:
                 card_val = get_single_card_val([player.hand[0]])
             else:
                 card_val = get_single_card_val([player.hand[1]])
             action = player.STRATEGY_TABLE_SOFT_HAND["A-" + str(card_val)][get_single_card_val(dealer_hand[0])]
-        #Pair condition
-       
-        elif(card_one == card_two):
-            if('Ace' in card_one):
-                card_val = get_single_card_val(player.hand[0])
-                if(card_val == "Ace"):
-                    action = player.STRATEGY_TABLE_PAIR["A-A"][get_single_card_val(dealer_hand)]
-                if(card_val == 10):
-                    action = player.STRATEGY_TABLE_PAIR["T-T"][get_single_card_val(dealer_hand)]
-                else:
-                    action = player.STRATEGY_TABLE_PAIR[str(card_val) + "-" + str(card_val)][get_single_card_val(dealer_hand[0])]
+
         #Hard hand condtion
         else:
             card_sum = check_player_hand(player.hand)
@@ -449,9 +466,8 @@ def generate_inital_population(num_players):
 
 #Plays a game with a player until 1000 hands or player pool is 0
 def play_game(generation_list, player):
-    counter = 0
     global PLAYER_RESULTS_LIST
-    while((counter < LIMIT) and player.POOL > 0):
+    while((player.hands_played < player.LIMIT) and player.POOL > 0):
         [player.hand, dealer_hand] = deal()
         print("Dealer Hand: {}".format(dealer_hand[0]))
         result = check_naturals([player.hand, dealer_hand])
@@ -460,9 +476,10 @@ def play_game(generation_list, player):
         else:
             print(result + " had naturals")
             print("Balance: " + str(player.POOL))
-        counter += 1
+        reset_player(player)
+        player.hands_played += 1
     #Build array of result information to determine victors
-    generation_list.append([player.player_number, player.POOL, player])
+    generation_list.append([player.player_number, player.POOL, player.hands_played, player])
     return generation_list
         
 
