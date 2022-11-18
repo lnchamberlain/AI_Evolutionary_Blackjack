@@ -52,16 +52,24 @@ class player():
                                    "4-4":{2:"", 3:"", 4:"", 5:"", 6:"", 7:"", 8:"", 9:"", 10:"", "Ace":""},
                                    "3-3":{2:"", 3:"", 4:"", 5:"", 6:"", 7:"", 8:"", 9:"", 10:"", "Ace":""},
                                    "2-2":{2:"", 3:"", 4:"", 5:"", 6:"", 7:"", 8:"", 9:"", 10:"", "Ace":""}}
+        # running counts and unchanging variables
         self.hands_played = 0
-        self.POOL = 10000
-        self.LIMIT = 10000
+        self.hands_won = 0
+        self.hands_lost = 0
+        self.hands_tied = 0
+        self.POOL = 1000
+        self.LIMIT = 1000
+        self.generation = 0
+        self.player_number = 0
+        # reset after every hand
         self.done_with_hand = False
         self.BET_AMOUNT = 2
         self.hand = []
+        self.total = 0
+        self.dealer_hand = []
+        self.dealer_total = 0
         self.has_split = False
         self.split_card = None
-        self.generation = 0
-        self.player_number = 0
         
                                    
 
