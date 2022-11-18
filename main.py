@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python
 #################################################################################
 # 
@@ -14,6 +13,7 @@ import Player
 import time
 import concurrent.futures
 import multiprocessing as mp
+from multiprocessing import Queue
 import threading
 import random
 import sys
@@ -139,7 +139,7 @@ def visualize_strategy_tables(player):
 #Returns a random card from the populated deck
 def get_random_card():
     if(len(DECK) > 52):
-        print("Error: populate deck prior to drawing card")
+        #print("Error: populate deck prior to drawing card")
         return None
     return DECK[random.randint(0, len(DECK)-1)]
 
@@ -216,16 +216,16 @@ def hit(player):
 #ACTION: Double Down. Player hits one more time and bets a doubled amount. After hitting one more, procedure is the same as stand (see above)
 def double_down(player):
     if len(player.hand) != 2:
-        print("Error: can only double down with 2 cards")
+        #print("Error: can only double down with 2 cards")
         # if the AIs table says double and you have 3 cards, Hit instead
         hit(player)
         return None
     if player.has_split:
-        print("Error: cannot double after split")
+        #print("Error: cannot double after split")
         hit(player)
         return None
     player.BET_AMOUNT = 2 * player.BET_AMOUNT
-    print("Doubling Down with bet: $" + str(player.BET_AMOUNT))
+    #print("Doubling Down with bet: $" + str(player.BET_AMOUNT))
     hit(player)
     player.done_with_hand = True
 
@@ -234,18 +234,18 @@ def double_down(player):
 def split(player):
     # many of these tests can be removed when we decide if the AIs hand is a hard hand, soft hand, or pair
     if len(player.hand) != 2:
-        print("Error: Can only split with 2 cards")
+        #print("Error: Can only split with 2 cards")
         return none
         #reset_player(player)
     card_1 = player.hand[0].split(" of ")
     card_2 = player.hand[1].split(" of ")
     if card_1[0] != card_2[0]:
-        print("Error: Cannot split with no pair")
+        #print("Error: Cannot split with no pair")
         return none
         #reset_player(player)
         return None
     if player.has_split:
-        print("Error: Cannor split twice")
+        #print("Error: Cannor split twice")
         return None
     # store some split information: Bool, split card value, and create first hand
     player.has_split = True
@@ -265,7 +265,7 @@ def split(player):
 
 #Get a single cards value 
 def get_single_card_val(card):
-    print(card)
+    #print(card)
     l = card.split(" of ")
     value = l[0]
     if value != "Ace":
@@ -337,7 +337,7 @@ def play_hand(player):
         # A-A is a pair, not a soft or hard hand
         # need to deal with already_split to appropriate soft or hard hand within this function: e.g., draw 7,7     -> split -> first hand = 7,   draw 7   -> this is a hard 14 
         # After splitting aces, limit to 1 hit per hand
-        print("Player Hand: {}".format(player.hand) + " Total: " + str(check_player_hand(player.hand)))
+        #print("Player Hand: {}".format(player.hand) + " Total: " + str(check_player_hand(player.hand)))
         #TODO, do we check for an ace and a face card or automatic win before we reach this point?
         #Soft hand condtion
         card_one = player.hand[0]
@@ -391,7 +391,7 @@ def play_hand(player):
     
     #need to evaluate inside this function since split has 2 calls to play_hand
     evaluate_hands(player)
-    print("Balance: " + str(player.POOL))
+    #print("Balance: " + str(player.POOL))
 
 
  #Evaluates Hands after play is complete, prints winner, and returns True or False for a Win
@@ -399,31 +399,31 @@ def evaluate_hands(player):
     player.total = check_player_hand(player.hand)
     get_dealer_hand(player)
     if(player.total == "BUST"):
-        print("Dealer Hand: {}  Total: {}\nPlayer Hand: {}  Total: {}".format(player.dealer_hand, player.dealer_total, player.hand, player.total))
-        print("Player Lose, Bust")
+        #print("Dealer Hand: {}  Total: {}\nPlayer Hand: {}  Total: {}".format(player.dealer_hand, player.dealer_total, player.hand, player.total))
+        #print("Player Lose, Bust")
         player.POOL -= player.BET_AMOUNT
         player.hands_lost += 1
         return False
     elif(player.dealer_total == "BUST"):
-        print("Dealer Hand: {}  Total: {}\nPlayer Hand: {}  Total: {}".format(player.dealer_hand, player.dealer_total, player.hand, player.total))
-        print("Player wins, dealer bust")
+        #print("Dealer Hand: {}  Total: {}\nPlayer Hand: {}  Total: {}".format(player.dealer_hand, player.dealer_total, player.hand, player.total))
+        #print("Player wins, dealer bust")
         player.POOL += player.BET_AMOUNT
         player.hands_won += 1
         return True
     elif(player.total > player.dealer_total):
-        print("Dealer Hand: {}  Total: {}\nPlayer Hand: {}  Total: {}".format(player.dealer_hand, player.dealer_total, player.hand, player.total))
-        print("Player Wins")
+        #print("Dealer Hand: {}  Total: {}\nPlayer Hand: {}  Total: {}".format(player.dealer_hand, player.dealer_total, player.hand, player.total))
+        #print("Player Wins")
         player.POOL += player.BET_AMOUNT
         player.hands_won += 1
         return True
     elif(player.total == player.dealer_total):
-        print("Dealer Hand: {}  Total: {}\nPlayer Hand: {}  Total: {}".format(player.dealer_hand, player.dealer_total, player.hand, player.total))
-        print("Push")
+        #print("Dealer Hand: {}  Total: {}\nPlayer Hand: {}  Total: {}".format(player.dealer_hand, player.dealer_total, player.hand, player.total))
+        #print("Push")
         player.hands_tied += 1
         return True
     else:
-        print("Dealer Hand: {}  Total: {}\nPlayer Hand: {}  Total: {}".format(player.dealer_hand, player.dealer_total, player.hand, player.total))
-        print("Player Lose")
+        #print("Dealer Hand: {}  Total: {}\nPlayer Hand: {}  Total: {}".format(player.dealer_hand, player.dealer_total, player.hand, player.total))
+        #print("Player Lose")
         player.POOL -= player.BET_AMOUNT
         player.hands_lost += 1
         return False
@@ -475,31 +475,31 @@ def generate_inital_population(num_players):
 
 
 #Plays a game with a player until 1000 hands or player pool is 0
-def play_game(player, results, index):
+def play_game(player,RESULTS):
+    populate_deck()
     while((player.hands_played < player.LIMIT) and player.POOL > 0):
         deal(player)
-        print("Dealer Hand: {}".format(player.dealer_hand[0]))
+        #print("Dealer Hand: {}".format(player.dealer_hand[0]))
         result = check_naturals(player)
         if not result:
             play_hand(player)
-        else:
-            print(result + " had naturals")
-            print("Balance: " + str(player.POOL))
+        #else:
+            #print(result + " had naturals")
+            #print("Balance: " + str(player.POOL))
         reset_player(player)
         player.hands_played += 1
     #Build array of result information to determine victors
-    results[index] = [player.player_number, player.generation, player.POOL, player.hands_played, player.hands_won, player.hands_lost, player.hands_tied]
+    RESULTS.put([player.player_number, player.generation, player.POOL, player.hands_played, player.hands_won, player.hands_lost, player.hands_tied])
     return 
 
 
 POP_SIZE = 100
-RESULTS = [None]*POP_SIZE
 num_processes = os.cpu_count()
 Threads = [None]*num_processes
 
 
 if __name__ == "__main__":
-    populate_deck()
+   
     OPTIMAL_PLAYER = Player.player()
     OPTIMAL_PLAYER.STRATEGY_TABLE_HARD_HAND = PROVEN_STRATEGY_TABLE_HARD_HAND
     OPTIMAL_PLAYER.STRATEGY_TABLE_SOFT_HAND = PROVEN_STRATEGY_TABLE_SOFT_HAND
@@ -512,8 +512,10 @@ if __name__ == "__main__":
         population[i].generation = 0
         population[i].player_number = i + 1
 
-    # Running with Treads
+    # Running with Miltiprocessing
     ##################################################################################################
+    RESULTS = mp.Queue()
+    Generation1 = []
     i = 0
     Start = time.time()
     # loops through population
@@ -521,21 +523,23 @@ if __name__ == "__main__":
         # thread index is population % desired number of threads
         threadIndex = i % num_processes
         # play game through each thread and write result into RESULTS
-        Threads[threadIndex] = threading.Thread(target=play_game, args=(population[i], RESULTS, i,))
+        Threads[threadIndex] = mp.Process(target=play_game, args=(population[i],RESULTS,))
         Threads[threadIndex].start()
         # if you reach the max number of threads, wait for all threads to finish
         if threadIndex == num_processes-1:
             for j in range(num_processes):
                 Threads[j].join()
+                Generation1.append(RESULTS.get())
+                print("Process: " + str(i))
         i += 1
     # after looping through population, wait for remaining threads
     for j in range(num_processes):
         Threads[j].join()
     End = time.time()
-    for results in RESULTS:
+    for results in Generation1:
         print(results)
+    
     print("Time: " + str(End-Start))
-
     # Running without Treads
     ##################################################################################################
     '''

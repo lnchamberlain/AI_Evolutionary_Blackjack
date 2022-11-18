@@ -57,8 +57,8 @@ class player():
         self.hands_won = 0
         self.hands_lost = 0
         self.hands_tied = 0
-        self.POOL = 1000
-        self.LIMIT = 1000
+        self.POOL = 500_000
+        self.LIMIT = 500_000
         self.generation = 0
         self.player_number = 0
         # reset after every hand
@@ -70,8 +70,3 @@ class player():
         self.dealer_total = 0
         self.has_split = False
         self.split_card = None
-        
-                                   
-
-
-
