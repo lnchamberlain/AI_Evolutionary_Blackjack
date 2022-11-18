@@ -29,8 +29,10 @@ class player():
                               8:{2:"", 3:"", 4:"", 5:"", 6:"", 7:"", 8:"", 9:"", 10:"", "Ace":""},
                               7:{2:"", 3:"", 4:"", 5:"", 6:"", 7:"", 8:"", 9:"", 10:"", "Ace":""},
                               6:{2:"", 3:"", 4:"", 5:"", 6:"", 7:"", 8:"", 9:"", 10:"", "Ace":""},
-                              5:{2:"", 3:"", 4:"", 5:"", 6:"", 7:"", 8:"", 9:"", 10:"", "Ace":""}}
-                             
+                              5:{2:"", 3:"", 4:"", 5:"", 6:"", 7:"", 8:"", 9:"", 10:"", "Ace":""},
+                              4:{2:"", 3:"", 4:"", 5:"", 6:"", 7:"", 8:"", 9:"", 10:"", "Ace":""}}
+                               # might need to add a 4 for the condition if it has split 2,2 and draws a 2                     
+
         self.STRATEGY_TABLE_SOFT_HAND = {"A-9":{2:"", 3:"", 4:"", 5:"", 6:"", 7:"", 8:"", 9:"", 10:"", "Ace":""}, 
                                    "A-8":{2:"", 3:"", 4:"", 5:"", 6:"", 7:"", 8:"", 9:"", 10:"", "Ace":""},
                                    "A-7":{2:"", 3:"", 4:"", 5:"", 6:"", 7:"", 8:"", 9:"", 10:"", "Ace":""},
@@ -50,17 +52,21 @@ class player():
                                    "4-4":{2:"", 3:"", 4:"", 5:"", 6:"", 7:"", 8:"", 9:"", 10:"", "Ace":""},
                                    "3-3":{2:"", 3:"", 4:"", 5:"", 6:"", 7:"", 8:"", 9:"", 10:"", "Ace":""},
                                    "2-2":{2:"", 3:"", 4:"", 5:"", 6:"", 7:"", 8:"", 9:"", 10:"", "Ace":""}}
+        # running counts and unchanging variables
         self.hands_played = 0
-        self.POOL = 500
+        self.hands_won = 0
+        self.hands_lost = 0
+        self.hands_tied = 0
+        self.POOL = 500_000
+        self.LIMIT = 500_000
+        self.generation = 0
+        self.player_number = 0
+        # reset after every hand
         self.done_with_hand = False
         self.BET_AMOUNT = 2
         self.hand = []
+        self.total = 0
+        self.dealer_hand = []
+        self.dealer_total = 0
         self.has_split = False
         self.split_card = None
-        self.generation = 0
-        self.player_number = 0
-        
-                                   
-
-
-
