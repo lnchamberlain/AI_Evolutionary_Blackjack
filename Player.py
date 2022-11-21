@@ -40,10 +40,11 @@ class player():
                                    "A-5":{2:"", 3:"", 4:"", 5:"", 6:"", 7:"", 8:"", 9:"", 10:"", "Ace":""},
                                    "A-4":{2:"", 3:"", 4:"", 5:"", 6:"", 7:"", 8:"", 9:"", 10:"", "Ace":""},
                                    "A-3":{2:"", 3:"", 4:"", 5:"", 6:"", 7:"", 8:"", 9:"", 10:"", "Ace":""},
-                                   "A-2":{2:"", 3:"", 4:"", 5:"", 6:"", 7:"", 8:"", 9:"", 10:"", "Ace":""}}
+                                   "A-2":{2:"", 3:"", 4:"", 5:"", 6:"", 7:"", 8:"", 9:"", 10:"", "Ace":""},
+                                   "A-A":{2:"", 3:"", 4:"", 5:"", 6:"", 7:"", 8:"", 9:"", 10:"", "Ace":""}}
 
         self.STRATEGY_TABLE_PAIR = {"A-A":{2:"", 3:"", 4:"P", 5:"", 6:"", 7:"", 8:"", 9:"", 10:"", "Ace":""}, 
-                                   "T-T":{2:"S", 3:"", 4:"S", 5:"", 6:"", 7:"", 8:"", 9:"", 10:"", "Ace":""},
+                                   "10-10":{2:"S", 3:"", 4:"S", 5:"", 6:"", 7:"", 8:"", 9:"", 10:"", "Ace":""},
                                    "9-9":{2:"", 3:"", 4:"", 5:"", 6:"", 7:"", 8:"", 9:"", 10:"", "Ace":""},
                                    "8-8":{2:"", 3:"", 4:"", 5:"", 6:"", 7:"", 8:"", 9:"", 10:"", "Ace":""},
                                    "7-7":{2:"", 3:"", 4:"", 5:"", 6:"", 7:"", 8:"", 9:"", 10:"", "Ace":""},
@@ -57,16 +58,15 @@ class player():
         self.hands_won = 0
         self.hands_lost = 0
         self.hands_tied = 0
-        self.POOL = 500_000
-        self.LIMIT = 500_000
+        self.POOL = 1_000_000
+        self.LIMIT = 100_000
         self.generation = 0
         self.player_number = 0
         # reset after every hand
-        self.done_with_hand = False
-        self.BET_AMOUNT = 2
-        self.hand = []
+        self.hand = [0, 0]
         self.total = 0
-        self.dealer_hand = []
-        self.dealer_total = 0
-        self.has_split = False
+        self.BET_AMOUNT = 2
+        self.first_action = True
+        self.done_with_hand = False
+        self.can_split = False
         self.split_card = None
