@@ -10,6 +10,7 @@
 ################################################################################
 
 import Player
+import Dealer
 import time
 import concurrent.futures
 import multiprocessing as mp
@@ -136,40 +137,50 @@ def visualize_strategy_tables(player):
     os.remove(path+player_designation+"info.png")
 
 
-#Returns a random card from the populated deck
+#Returns rank of random card (blackjack doesnt care about suits) from the populated deck
 def get_random_card():
     if(len(DECK) > 52):
         #print("Error: populate deck prior to drawing card")
         return None
-    return DECK[random.randint(0, len(DECK)-1)]
+    card = DECK[random.randint(0, len(DECK)-1)]
+    card = card.split(" of ")
+    return card[0]
 
 
 #Returns an array of the player's cards and the dealers visible card and not visible card in the form [[Player Card 1, Player Card 2], [Dealer Visible Card, Dealer not Visible Card]]. Example: [[]"7 of hearts", "King of Spades"], []"Jack of Diamonds", "3 of Clubs"]]
-def deal(player):
-    player.hand = [get_random_card(), get_random_card()]
-    player.dealer_hand = [get_random_card(), get_random_card()]
+def deal(player, dealer):
+    player_card_1 = get_random_card()
+    player_card_2 = get_random_card()
+    if player_card_1 == player_card_2:
+        player.can_split = True
+    get_card_value(player, player_card_1)
+    get_card_value(player, player_card_2)
+
+    dealer_card_1 = get_random_card()
+    if dealer_card_1 == 'Ace':
+        dealer.hole_card = 'Ace'
+    elif dealer_card_1 == 'Jack' or dealer_card_1 == 'Queen' or dealer_card_1 == 'King':
+        dealer.hole_card = 10
+    else:
+        dealer.hole_card = int(dealer_card_1)
+    get_card_value(dealer, get_random_card())
+    get_card_value(dealer, get_random_card())
     return 
 
 #Checks for the condition wherein a player is drawn an Ace and a 10 card (10 or any face card), resulting in an immediate Blackjack. Different conditions exist for player and dealers having a natural, returns None if not applicable, return a string describing who won is applicable. 
-def check_naturals(player):
-    player_val_one = get_card_value(player.hand[0])
-    player_val_two = get_card_value(player.hand[1])
-    player_sum = player_val_one + player_val_two
-    dealer_val_one = get_card_value(player.dealer_hand[0])
-    dealer_val_two = get_card_value(player.dealer_hand[1])
-    dealer_sum = dealer_val_one + dealer_val_two
+def check_naturals(player, dealer):
     # when playing final version (not when training AI) we want to update the pool accordingly 
-    if(player_sum == 21 and dealer_sum != 21):
+    if player.total == 21 and dealer.total != 21:
         # the player normally earns 3/2 odds -> on a $2 bet, +$3 is earned instead of the normal +$2
         player.POOL += (1.5 * player.BET_AMOUNT)
         player.hands_won += 1
         return "Player Blackjack: Player Win"
-    if(player_sum != 21 and dealer_sum == 21):
+    if player.total != 21 and dealer.total == 21:
         # the player looses normally
         player.POOL -= player.BET_AMOUNT
         player.hands_lost += 1
         return "Dealer BlackJack: Player Lose"
-    if(player_sum == 21 and dealer_sum == 21):
+    if player.total == 21 and dealer.total == 21:
         # the bet is a "push", no money exchanged
         player.hands_tied += 1
         return "Player and Dealer Blackjack: Push"
@@ -179,16 +190,27 @@ def check_naturals(player):
 
 
 #Takes a card in the form "Value of Suit" and returns an integer of the value unless Ace. Example: "7 of Hearts" -> 7, "King of Spades" -> 10, "Ace of Clubs" -> "Ace"
-def get_card_value(card):
-    card = card.split(" of ")
-    value = card[0]
-    if(value == "Ace"):
-        #Function only used in check_naturals(), ace should default to 11 to make blackjack
-        return 11
-    if(value == "King" or value == "Queen" or value == "Jack"):
-        return 10
+def get_card_value(player, value):
+    if value == "Ace":
+        # player can only have 1 Ace without busting     i.e., hand [Ace, Ace] == [Ace, 1]
+        # player can only have an Ace if total is < 11   i.e., hand [8, 8, Ace] == [8, 8, 1]
+        if player.hand[0] != 11 and player.total < 11:
+            player.hand[0] = 11
+            player.total += 11
+        else:
+            player.hand[1] += 1
+            player.total += 1
+    elif value == "King" or value == "Queen" or value == "Jack":
+        player.hand[1] += 10
+        player.total += 10
     else:
-        return int(value)
+        value = int(value)
+        player.hand[1] += value
+        player.total += value
+    if player.total > 21 and player.hand[0] == 11:
+        player.total -= 10
+        player.hand[0] = 0
+        player.hand[1] += 1
 
 
 #Fills in the global deck variable with 52 strings of the form "value of suit"
@@ -210,18 +232,16 @@ def stand(player):
 
 #ACTION: player asks for a new card to be added to their hand
 def hit(player):
-    player.hand.append(get_random_card())
+    card = get_random_card()
+    get_card_value(player, card)
+
 
 
 #ACTION: Double Down. Player hits one more time and bets a doubled amount. After hitting one more, procedure is the same as stand (see above)
 def double_down(player):
-    if len(player.hand) != 2:
+    if not player.first_action:
         #print("Error: can only double down with 2 cards")
         # if the AIs table says double and you have 3 cards, Hit instead
-        hit(player)
-        return None
-    if player.has_split:
-        #print("Error: cannot double after split")
         hit(player)
         return None
     player.BET_AMOUNT = 2 * player.BET_AMOUNT
@@ -231,38 +251,36 @@ def double_down(player):
 
 
 #ACTION: Checks if there is a pair and player has not split.  Stores pair value so it can evaluate the hands individually
-def split(player):
-    # many of these tests can be removed when we decide if the AIs hand is a hard hand, soft hand, or pair
-    if len(player.hand) != 2:
-        #print("Error: Can only split with 2 cards")
-        return none
-        #reset_player(player)
-    card_1 = player.hand[0].split(" of ")
-    card_2 = player.hand[1].split(" of ")
-    if card_1[0] != card_2[0]:
-        #print("Error: Cannot split with no pair")
-        return none
-        #reset_player(player)
-        return None
-    if player.has_split:
-        #print("Error: Cannor split twice")
-        return None
+def split(player, dealer):
     # store some split information: Bool, split card value, and create first hand
-    player.has_split = True
-    player.split_card = player.hand[1]
-    player.hand.pop(1)
-    player.hand.append(get_random_card())
+    player.can_split = False
+    if player.hand[0] == 11:
+        player.hand[1] = 0
+        player.split_card = 11
+        player.hand[0] = 11
+        player.done_with_hand = True
+    else:
+        player.split_card = int(player.total/2)
+        player.hand[1] = player.split_card
+    player.total = player.split_card
+    hit(player)
     # play hand #1
-    play_hand(player)    
+    play_hand(player, dealer)    
     # Create second hand
     player.done_with_hand = False
-    player.hand.clear()
-    player.hand.append(player.split_card)
-    player.hand.append(get_random_card())
+    if player.split_card == 11:
+        player.hand[0] = 11
+        player.hand[1] = 0
+        player.done_with_hand = True
+    else:
+        player.hand[0] = 0
+        player.hand[1] = player.split_card
+    player.total = player.split_card
+    hit(player)
     # play hand #2
     # plays second hand when it exits into play_hand() function
     
-
+'''
 #Get a single cards value 
 def get_single_card_val(card):
     #print(card)
@@ -277,6 +295,7 @@ def get_single_card_val(card):
             #If Ace, use 11 unless that makes the player go over, then use 1
             total = "Ace"
     return total
+
 
 #Checks if player has exceeded 21, returns "BUST" if so and returns the total value of their cards if not
 def check_player_hand(hand):
@@ -306,28 +325,21 @@ def check_player_hand(hand):
         return "BUST"
     else:
         return total
-
+'''
 
  #As per the game rules, the dealer hits automatically if the total is under 17 and stands automatically if over 17 but under 21. Bust if 21 or over
-def get_dealer_hand(player):
-    player.dealer_total = check_player_hand(player.dealer_hand)
+def get_dealer_hand(dealer):
     # this is assuming the dealer is playing by Soft-17 rules (dealer must stand on a soft 17 e.g., [Ace, 6], [2, 4, Ace])
     # Solf-17 gives the dealer a slight advantage
-    while (player.dealer_total != "BUST") and (player.dealer_total < 17):
-        player.dealer_hand.append(get_random_card())
-        player.dealer_total = check_player_hand(player.dealer_hand)
-    return
-
+        while dealer.total < 17:
+            card = get_random_card()
+            get_card_value(dealer, card)
+        return
 
  #Checks action the AI will take until "done with hand"
-def play_hand(player):
-    count = 10
-
-    if player.has_split:
-        if check_player_hand(player.hand) == 21:
-            player.done_with_hand = True
-    
-
+def play_hand(player, dealer):
+    if player.total == 21:
+        player.done_with_hand = True
     while not player.done_with_hand:
         # choose action from randomized table
         # Hit, stand, double down, or split based on soft-hand, hard-hand, or pair
@@ -340,43 +352,31 @@ def play_hand(player):
         #print("Player Hand: {}".format(player.hand) + " Total: " + str(check_player_hand(player.hand)))
         #TODO, do we check for an ace and a face card or automatic win before we reach this point?
         #Soft hand condtion
-        card_one = player.hand[0]
-        card_two = player.hand[1]
-        card_one_rank = player.hand[0].split(" of ")
-        card_two_rank = player.hand[1].split(" of ")
 
         action = ''
 
-        # pause condition if repeated 10 times
-        if count == 0:
-            keep_playing = input("pause")
-        count -= 1
-
         #Pair condition: check this first so we dont need to check for 2 aces in soft-hand    
-        if(card_one_rank[0] == card_two_rank[0]) and not player.has_split:
-            if(card_one_rank[0] == 'Ace'):
-                action = player.STRATEGY_TABLE_PAIR["A-A"][get_single_card_val(player.dealer_hand[0])]
-            elif(card_one_rank[0] == '10' or card_one_rank[0] == 'Jack' or card_one_rank[0] == 'Queen' or card_one_rank[0] == 'King'):
-                action = player.STRATEGY_TABLE_PAIR["T-T"][get_single_card_val(player.dealer_hand[0])]
+        if player.can_split:
+            if player.hand[0] == 11:
+                action = player.STRATEGY_TABLE_PAIR["A-A"][dealer.hole_card]
             else:
-                card_val = get_single_card_val(player.hand[0])
-                action = player.STRATEGY_TABLE_PAIR[str(card_val) + "-" + str(card_val)][get_single_card_val(player.dealer_hand[0])]
+                value = str(int(player.total/2))
+                action = player.STRATEGY_TABLE_PAIR[value + "-" + value][dealer.hole_card]
 
-        elif 'Ace' in player.hand:
+        elif player.hand[0] == 11:
             #Get the value of the card that is not an ace
-            if 'Ace' not in player.hand[0]:
-                card_val = get_single_card_val([player.hand[0]])
+            if player.hand[1] == 1:
+                action = player.STRATEGY_TABLE_SOFT_HAND["A-A"][dealer.hole_card]
             else:
-                card_val = get_single_card_val([player.hand[1]])
-            action = player.STRATEGY_TABLE_SOFT_HAND["A-" + str(card_val)][get_single_card_val(player.dealer_hand[0])]
+                action = player.STRATEGY_TABLE_SOFT_HAND["A-" + str(player.hand[1])][dealer.hole_card]
 
         #Hard hand condtion
         else:
-            card_sum = check_player_hand(player.hand)
-            action = player.STRATEGY_TABLE_HARD_HAND[card_sum][get_single_card_val(player.dealer_hand[0])]
+            action = player.STRATEGY_TABLE_HARD_HAND[player.hand[1]][dealer.hole_card]
 
-            
+           
         #action = input("Enter your action (H,S,D,P): ")
+
         if action == 'H':
             hit(player)
         elif action == 'S':
@@ -384,39 +384,41 @@ def play_hand(player):
         elif action == 'D':
             double_down(player)
         elif action == 'P':
-            split(player)
+            player.first_action = False
+            split(player, dealer)
+        player.first_action = False
 
-        if check_player_hand(player.hand) == "BUST" or check_player_hand(player.hand) == 21:
+        
+        if player.total > 20:
             player.done_with_hand = True
     
     #need to evaluate inside this function since split has 2 calls to play_hand
-    evaluate_hands(player)
+    evaluate_hands(player, dealer)
     #print("Balance: " + str(player.POOL))
 
 
  #Evaluates Hands after play is complete, prints winner, and returns True or False for a Win
-def evaluate_hands(player):
-    player.total = check_player_hand(player.hand)
-    get_dealer_hand(player)
-    if(player.total == "BUST"):
+def evaluate_hands(player, dealer):
+    get_dealer_hand(dealer)
+    if(player.total > 21):
         #print("Dealer Hand: {}  Total: {}\nPlayer Hand: {}  Total: {}".format(player.dealer_hand, player.dealer_total, player.hand, player.total))
         #print("Player Lose, Bust")
         player.POOL -= player.BET_AMOUNT
         player.hands_lost += 1
         return False
-    elif(player.dealer_total == "BUST"):
+    elif(dealer.total > 21):
         #print("Dealer Hand: {}  Total: {}\nPlayer Hand: {}  Total: {}".format(player.dealer_hand, player.dealer_total, player.hand, player.total))
         #print("Player wins, dealer bust")
         player.POOL += player.BET_AMOUNT
         player.hands_won += 1
         return True
-    elif(player.total > player.dealer_total):
+    elif(player.total > dealer.total):
         #print("Dealer Hand: {}  Total: {}\nPlayer Hand: {}  Total: {}".format(player.dealer_hand, player.dealer_total, player.hand, player.total))
         #print("Player Wins")
         player.POOL += player.BET_AMOUNT
         player.hands_won += 1
         return True
-    elif(player.total == player.dealer_total):
+    elif(player.total == dealer.total):
         #print("Dealer Hand: {}  Total: {}\nPlayer Hand: {}  Total: {}".format(player.dealer_hand, player.dealer_total, player.hand, player.total))
         #print("Push")
         player.hands_tied += 1
@@ -429,16 +431,43 @@ def evaluate_hands(player):
         return False
 
 
+    #Plays a game with a player until 1000 hands or player pool is 0
+def play_game(player,RESULTS):
+    populate_deck()
+    dealer = Dealer.dealer()
+    while player.hands_played < player.LIMIT:
+        deal(player, dealer)
+        #print("Dealer Hand: {}".format(player.dealer_hand[0]))
+        result = check_naturals(player, dealer)
+        if not result:
+            play_hand(player, dealer)
+        #else:
+            #print(result + " had naturals")
+            #print("Balance: " + str(player.POOL))
+        reset(player, dealer)
+        player.hands_played += 1
+    #Build array of result information to determine victors
+    RESULTS.put([player.player_number, player.generation, player.POOL, player.hands_played, player.hands_won, player.hands_lost, player.hands_tied])
+    #RESULTS.append([player.player_number, player.generation, player.POOL, player.hands_played, player.hands_won, player.hands_lost, player.hands_tied])
+    return 
+
+
  #Resets values of player.  i.e. if you double down, the next hand is reset to a bet of $2
-def reset_player(player):
+def reset(player, dealer):
     player.done_with_hand = False
     player.BET_AMOUNT = 2
-    player.hand = []
+    player.hand = [0, 0]
     player.total = 0
     player.dealer_hand = []
     player.dealer_total = 0
-    player.has_split = False
+    player.can_split = False
     player.split_card = None
+    player.first_action = True
+
+    dealer.hand = [0, 0]
+    dealer.hole_card
+    dealer.total = 0
+
 
 
 #Returns a random move depending on the mode (hard hard, soft hand, and pair)
@@ -472,34 +501,12 @@ def generate_inital_population(num_players):
     return initial_population
 
 
-
-
-#Plays a game with a player until 1000 hands or player pool is 0
-def play_game(player,RESULTS):
-    populate_deck()
-    while((player.hands_played < player.LIMIT) and player.POOL > 0):
-        deal(player)
-        #print("Dealer Hand: {}".format(player.dealer_hand[0]))
-        result = check_naturals(player)
-        if not result:
-            play_hand(player)
-        #else:
-            #print(result + " had naturals")
-            #print("Balance: " + str(player.POOL))
-        reset_player(player)
-        player.hands_played += 1
-    #Build array of result information to determine victors
-    RESULTS.put([player.player_number, player.generation, player.POOL, player.hands_played, player.hands_won, player.hands_lost, player.hands_tied])
-    return 
-
-
-POP_SIZE = 100
+POP_SIZE = 400
 num_processes = os.cpu_count()
 Threads = [None]*num_processes
 
 
 if __name__ == "__main__":
-   
     OPTIMAL_PLAYER = Player.player()
     OPTIMAL_PLAYER.STRATEGY_TABLE_HARD_HAND = PROVEN_STRATEGY_TABLE_HARD_HAND
     OPTIMAL_PLAYER.STRATEGY_TABLE_SOFT_HAND = PROVEN_STRATEGY_TABLE_SOFT_HAND
@@ -511,7 +518,7 @@ if __name__ == "__main__":
     for i in range(POP_SIZE):
         population[i].generation = 0
         population[i].player_number = i + 1
-
+    
     # Running with Miltiprocessing
     ##################################################################################################
     RESULTS = mp.Queue()
@@ -543,11 +550,13 @@ if __name__ == "__main__":
     # Running without Treads
     ##################################################################################################
     '''
+    RESULTS = []
     i = 0
     Start = time.time()
+    populate_deck()
     for player in population:
-        play_game(player, RESULTS, i)
-        i += 1
+        play_game(player, RESULTS)
+        print(RESULTS.pop())
     End = time.time()
     for results in RESULTS:
         print(results)
