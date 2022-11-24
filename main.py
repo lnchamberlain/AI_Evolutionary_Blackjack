@@ -11,6 +11,7 @@
 
 import Player
 import Dealer
+import Evolution
 import time
 import concurrent.futures
 import multiprocessing as mp
@@ -303,21 +304,31 @@ def play_hand(player, dealer):
         if player.can_split:
             if player.hand[0] == 11:
                 action = player.STRATEGY_TABLE_PAIR["A-A"][dealer.hole_card]
+                player.COUNT_TABLE_PAIR["A-A"][dealer.hole_card] += 1
+                #print("PAIR: A-A")
+
             else:
                 value = str(int(player.total/2))
                 action = player.STRATEGY_TABLE_PAIR[value + "-" + value][dealer.hole_card]
+                player.COUNT_TABLE_PAIR[value + "-" + value][dealer.hole_card] += 1
+                #print("PAIR: " + value + "-" + value)
 
         # Soft Hand condition:
         elif player.hand[0] == 11:
             if player.hand[1] == 1:
                 action = player.STRATEGY_TABLE_SOFT_HAND["A-A"][dealer.hole_card]
+                player.COUNT_TABLE_SOFT_HAND["A-A"][dealer.hole_card] += 1
+                #print("SOFT HAND: A-A")
+
             else:
                 action = player.STRATEGY_TABLE_SOFT_HAND["A-" + str(player.hand[1])][dealer.hole_card]
-
+                player.COUNT_TABLE_SOFT_HAND["A-" + str(player.hand[1])][dealer.hole_card] += 1
+                #print("SOFT HAND: A-" + str(player.hand[1]))
         # Hard hand condtion:
         else:
             action = player.STRATEGY_TABLE_HARD_HAND[player.hand[1]][dealer.hole_card]
-
+            player.COUNT_TABLE_HARD_HAND[player.hand[1]][dealer.hole_card] += 1
+            #print("HARD HAND: " + str(player.hand[1]))
            
         #action = input("Enter your action (H,S,D,P): ")
 
@@ -404,7 +415,7 @@ def play_game(player,RESULTS):
     RESULTS.put(player)
     # RESULTS.put([player.player_number, player.generation, player.POOL, player.hands_played, player.hands_won, player.hands_lost, player.hands_tied])
     # use this when running manually 
-    #RESULTS.append([player.player_number, player.generation, player.POOL, player.hands_played, player.hands_won, player.hands_lost, player.hands_tied])
+    # RESULTS.append(player)
     return 
 
 
@@ -462,7 +473,7 @@ def generate_inital_population(num_players):
 DECK = []
 OPTIMAL_PLAYER = None
 VICTOR_RESULTS_LIST = []
-POP_SIZE = 100
+POP_SIZE = 16
 num_processes = os.cpu_count()
 Processes = [None]*num_processes
 
@@ -488,30 +499,37 @@ if __name__ == "__main__":
     i = 0
     Start = time.time()
     # loops through population
+    processesRunning = False
     while i < len(population):
         # thread index is population % desired number of threads
         processIndex = i % num_processes
         # play game through each thread and write result into RESULTS
         Processes[processIndex] = mp.Process(target=play_game, args=(population[i],RESULTS,))
         Processes[processIndex].start()
+        processesRunning = True
         # if you reach the max number of threads, wait for all threads to finish
         if processIndex == num_processes-1:
             for j in range(num_processes):
                 Processes[j].join()
                 Generation1.append(RESULTS.get())
                 print("Process: " + str(i))
+                processesRunning = False
         i += 1
 
     # after looping through population, wait for remaining threads started before htting the (processIndex == num_processes-1) condition
-    for j in range(processIndex + 1):
-        Processes[j].join()
-        Generation1.append(RESULTS.get())
-        print("Process: " + str(i))
+    if processesRunning == True:
+        for j in range(processIndex + 1):
+            Processes[j].join()
+            Generation1.append(RESULTS.get())
+            print("Process: " + str(i))
 
     End = time.time()
+
+    Generation1.sort(key=lambda x: x.POOL, reverse=True)
+
     for results in Generation1:
         print(results.player_number, results.hands_won, results.hands_lost, results.hands_tied)
-    
+
     print("Time: " + str(End-Start))
 
     # Running without Treads
@@ -523,9 +541,9 @@ if __name__ == "__main__":
     populate_deck()
     for player in population:
         play_game(player, RESULTS)
-        print(RESULTS.pop())
     End = time.time()
     for results in RESULTS:
-        print(results)
+        print(results.player_number, results.hands_won, results.hands_lost, results.hands_tied)
     print("Time: " + str(End-Start))
+    
     '''
