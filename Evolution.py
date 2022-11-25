@@ -12,6 +12,7 @@
 
 import random
 import Player
+import main
 
 
 def Selection(Generation):
@@ -29,7 +30,7 @@ def CrossOver(victors):
     w2 = ((victors[1].POOL / sum) + w1 / 100) * 100
     w3 = ((victors[2].POOL / sum) + w2 / 100) * 100 
       
-    players_per_generation = 400
+    players_per_generation = 5
     new_generation = []
     prev_gen_number = victors[0].generation
     new_gen_number = prev_gen_number + 1
@@ -87,3 +88,42 @@ def CrossOver(victors):
 def Mutation(child):
     print("STUB")
 
+
+#IGNORE THE BELOW, USED IT TO GENERATE THE CROSS OVER DEMO IMAGES
+'''
+if __name__ == "__main__":
+    victors = []
+    for i in range(4):
+        p = Player.player()
+        p.generation = 1
+        p.player_number = i + 1
+        victors.append(p)
+    print(victors)
+    player = victors[0]
+    player.POOL = 320
+    for row in player.STRATEGY_TABLE_HARD_HAND:
+            for elem in player.STRATEGY_TABLE_HARD_HAND[row]:
+                player.STRATEGY_TABLE_HARD_HAND[row][elem] = 'P'
+    player = victors[1]
+    player.POOL = 27
+    for row in player.STRATEGY_TABLE_HARD_HAND:
+            for elem in player.STRATEGY_TABLE_HARD_HAND[row]:
+                player.STRATEGY_TABLE_HARD_HAND[row][elem] = 'D'
+    player = victors[2]
+    player.POOL = 27
+    for row in player.STRATEGY_TABLE_HARD_HAND:
+            for elem in player.STRATEGY_TABLE_HARD_HAND[row]:
+                player.STRATEGY_TABLE_HARD_HAND[row][elem] = 'H'
+    player = victors[3]
+    player.POOL = 27
+    for row in player.STRATEGY_TABLE_HARD_HAND:
+            for elem in player.STRATEGY_TABLE_HARD_HAND[row]:
+                player.STRATEGY_TABLE_HARD_HAND[row][elem] = 'S'
+    
+    for v in victors: 
+        main.visualize_strategy_tables(v)
+    new_gen = CrossOver(victors)
+    for g in new_gen:
+        main.visualize_strategy_tables(g)
+
+ '''
