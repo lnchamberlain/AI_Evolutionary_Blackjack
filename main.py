@@ -11,7 +11,7 @@
 
 import Player
 import Dealer
-import Evolution
+from Evolution import Evolve
 import time
 import concurrent.futures
 import multiprocessing as mp
@@ -304,30 +304,30 @@ def play_hand(player, dealer):
         if player.can_split:
             if player.hand[0] == 11:
                 action = player.STRATEGY_TABLE_PAIR["A-A"][dealer.hole_card]
-                player.COUNT_TABLE_PAIR["A-A"][dealer.hole_card] += 1
+                #player.COUNT_TABLE_PAIR["A-A"][dealer.hole_card] += 1
                 #print("PAIR: A-A")
 
             else:
                 value = str(int(player.total/2))
                 action = player.STRATEGY_TABLE_PAIR[value + "-" + value][dealer.hole_card]
-                player.COUNT_TABLE_PAIR[value + "-" + value][dealer.hole_card] += 1
+                #player.COUNT_TABLE_PAIR[value + "-" + value][dealer.hole_card] += 1
                 #print("PAIR: " + value + "-" + value)
 
         # Soft Hand condition:
         elif player.hand[0] == 11:
             if player.hand[1] == 1:
                 action = player.STRATEGY_TABLE_SOFT_HAND["A-A"][dealer.hole_card]
-                player.COUNT_TABLE_SOFT_HAND["A-A"][dealer.hole_card] += 1
+                #player.COUNT_TABLE_SOFT_HAND["A-A"][dealer.hole_card] += 1
                 #print("SOFT HAND: A-A")
 
             else:
                 action = player.STRATEGY_TABLE_SOFT_HAND["A-" + str(player.hand[1])][dealer.hole_card]
-                player.COUNT_TABLE_SOFT_HAND["A-" + str(player.hand[1])][dealer.hole_card] += 1
+                #player.COUNT_TABLE_SOFT_HAND["A-" + str(player.hand[1])][dealer.hole_card] += 1
                 #print("SOFT HAND: A-" + str(player.hand[1]))
         # Hard hand condtion:
         else:
             action = player.STRATEGY_TABLE_HARD_HAND[player.hand[1]][dealer.hole_card]
-            player.COUNT_TABLE_HARD_HAND[player.hand[1]][dealer.hole_card] += 1
+            #player.COUNT_TABLE_HARD_HAND[player.hand[1]][dealer.hole_card] += 1
             #print("HARD HAND: " + str(player.hand[1]))
            
         #action = input("Enter your action (H,S,D,P): ")
@@ -413,9 +413,7 @@ def play_game(player,RESULTS):
     #Build array of result information to determine victors
     # use this when using processes 
     RESULTS.put(player)
-    # RESULTS.put([player.player_number, player.generation, player.POOL, player.hands_played, player.hands_won, player.hands_lost, player.hands_tied])
-    # use this when running manually 
-    # RESULTS.append(player)
+    #RESULTS.append(player)
     return 
 
 
@@ -473,7 +471,7 @@ def generate_inital_population(num_players):
 DECK = []
 OPTIMAL_PLAYER = None
 VICTOR_RESULTS_LIST = []
-POP_SIZE = 16
+POP_SIZE = 100
 num_processes = os.cpu_count()
 Processes = [None]*num_processes
 
@@ -485,65 +483,84 @@ if __name__ == "__main__":
     OPTIMAL_PLAYER.STRATEGY_TABLE_PAIR = PROVEN_STRATEGY_TABLE_PAIR
     visualize_strategy_tables(OPTIMAL_PLAYER)
     population = generate_inital_population(POP_SIZE)
-    print(population)
-    #Fill in generation info and player numbers 
-    for i in range(POP_SIZE):
-        population[i].generation = 0
-        population[i].player_number = i + 1
+
     
     # Running with Miltiprocessing
     ##################################################################################################
     # the mp.Queue() is how we extract individual process results
-    RESULTS = mp.Queue()
-    Generation1 = []
-    i = 0
-    Start = time.time()
-    # loops through population
-    processesRunning = False
-    while i < len(population):
-        # thread index is population % desired number of threads
-        processIndex = i % num_processes
-        # play game through each thread and write result into RESULTS
-        Processes[processIndex] = mp.Process(target=play_game, args=(population[i],RESULTS,))
-        Processes[processIndex].start()
-        processesRunning = True
-        # if you reach the max number of threads, wait for all threads to finish
-        if processIndex == num_processes-1:
-            for j in range(num_processes):
+    GenerationNum = 0
+    while GenerationNum < 200:
+        #Fill in generation info and player numbers 
+        for i in range(POP_SIZE):
+            population[i].generation = GenerationNum
+            population[i].player_number = i + 1
+            population[i].hands_won = 0
+            population[i].hands_lost = 0
+            population[i].hands_tied = 0
+            population[i].hands_played = 0
+            population[i].POOL = 1_000_000
+            population[i].LIMIT = 10_000
+
+        RESULTS = mp.Queue()
+        FinishedGeneration = []
+        i = 0
+        Start = time.time()
+        # loops through population
+        processesRunning = False
+        while i < len(population):
+            # thread index is population % desired number of threads
+            processIndex = i % num_processes
+            # play game through each thread and write result into RESULTS
+            Processes[processIndex] = mp.Process(target=play_game, args=(population[i],RESULTS,))
+            Processes[processIndex].start()
+            processesRunning = True
+            # if you reach the max number of threads, wait for all threads to finish
+            if processIndex == num_processes-1:
+                for j in range(num_processes):
+                    Processes[j].join()
+                    FinishedGeneration.append(RESULTS.get())
+                    print("Process: " + str(i))
+                    processesRunning = False
+            i += 1
+
+        # after looping through population, wait for remaining threads started before htting the (processIndex == num_processes-1) condition
+        if processesRunning == True:
+            for j in range(processIndex + 1):
                 Processes[j].join()
-                Generation1.append(RESULTS.get())
+                FinishedGeneration.append(RESULTS.get())
                 print("Process: " + str(i))
-                processesRunning = False
-        i += 1
 
-    # after looping through population, wait for remaining threads started before htting the (processIndex == num_processes-1) condition
-    if processesRunning == True:
-        for j in range(processIndex + 1):
-            Processes[j].join()
-            Generation1.append(RESULTS.get())
-            print("Process: " + str(i))
+        End = time.time()
 
-    End = time.time()
+        FinishedGeneration.sort(key=lambda x: x.POOL, reverse=True)
 
-    Generation1.sort(key=lambda x: x.POOL, reverse=True)
+        for results in FinishedGeneration:
+            print(results.player_number, results.hands_won, results.hands_lost, results.hands_tied)
 
-    for results in Generation1:
-        print(results.player_number, results.hands_won, results.hands_lost, results.hands_tied)
+        print("Time: " + str(End-Start))
 
-    print("Time: " + str(End-Start))
+        visualize_strategy_tables(FinishedGeneration[0])
+        population = Evolve(FinishedGeneration)
 
-    # Running without Treads
-    ##################################################################################################
+        GenerationNum +=1
+
+        # Running without Treads
+        ##################################################################################################
     '''
+    for i in range(POP_SIZE):
+        population[i].generation = 0
+        population[i].player_number = i + 1
+
     RESULTS = []
     i = 0
     Start = time.time()
     populate_deck()
     for player in population:
         play_game(player, RESULTS)
+        print(str(player.player_number) + " " + str(player.hands_played))
     End = time.time()
     for results in RESULTS:
         print(results.player_number, results.hands_won, results.hands_lost, results.hands_tied)
     print("Time: " + str(End-Start))
-    
     '''
+        

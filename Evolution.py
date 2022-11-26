@@ -12,12 +12,84 @@
 
 import random
 import Player
-import main
+
+POP_SIZE = 100
+# number of payers chosen for each tournament
+tourneyNum = 4
+# number of parents to make a child 
+numParents = 4
+
+def Evolve(Generation):
+    NextGeneration = []
+    # do whatever selection we want
+    TourneySelection(Generation, NextGeneration)
+    return NextGeneration
 
 
-def Selection(Generation):
-    print("STUB")
+def TourneySelection(Generation, NextGeneration):
+    Selected = []
+    # Create groups of players of size tourneyNum until the generation is empty
+    while len(Generation) > 0:
+        Tourney = []
+        # choose, without replacement, random players from the generation 
+        for i in range(tourneyNum):
+            randomChoice = random.randint(0, len(Generation)-1)
+            Tourney.append(Generation.pop(randomChoice))
+            if len(Generation) == 0:
+               i = tourneyNum
+        # sort the players in the tournament
+        Tourney.sort(key=lambda x: x.POOL, reverse=True)
+        # append the best to the next generation
+        NextGeneration.append(Tourney[0])
 
+    # THIS FILLS THE REST OF THE GENERATION
+    # make 2 copies of the selected generation
+    Selected = NextGeneration.copy()
+    SelectedTemp = Selected.copy()
+    # while the generation isn't full
+    while len(NextGeneration) < POP_SIZE:
+        # the remaining victors is less that how many parents/child
+        if len(SelectedTemp) < numParents:
+            # recopy the victors
+            SelectedTemp = Selected.copy()
+        parents = []
+        # copy random parents into list "parents" without replacement
+        for i in range(numParents):
+            randomChoice = random.randint(0, len(SelectedTemp)-1)
+            parents.append(SelectedTemp.pop(randomChoice))
+        
+        NextGeneration.append(CrossOverTourney(parents))
+
+
+
+#Takes in an array of the 4 victor players of the previous generation. Returns a array of the next generation
+def CrossOverTourney(Parents):
+    sum = 0
+    weights = []
+
+    #Weights are calcuated as the % of the total winnings. Progressively summed to get 4 values that sum to 100, i.e 0 to w1 = Player 1 Pool / sum, w1 to w2 = Player 2 Pool / sum
+    for player in Parents:
+        sum += player.POOL
+
+    for player in Parents:
+        weights.append(player.POOL/sum)
+      
+    child = Player.player()
+    #Fill in Hard hand table
+    for row in child.STRATEGY_TABLE_HARD_HAND:        
+        for elem in child.STRATEGY_TABLE_HARD_HAND[row]:
+            child.STRATEGY_TABLE_HARD_HAND[row][elem] = random.choices([player.STRATEGY_TABLE_HARD_HAND[row][elem] for player in Parents], weights)[0]
+    #Fill in Soft hand table
+    for row in child.STRATEGY_TABLE_SOFT_HAND:        
+        for elem in child.STRATEGY_TABLE_SOFT_HAND[row]:
+            child.STRATEGY_TABLE_SOFT_HAND[row][elem] = random.choices([player.STRATEGY_TABLE_SOFT_HAND[row][elem] for player in Parents], weights)[0]
+    #Fill in pairs tables
+    for row in child.STRATEGY_TABLE_PAIR:        
+        for elem in child.STRATEGY_TABLE_PAIR[row]:
+            child.STRATEGY_TABLE_PAIR[row][elem] = random.choices([player.STRATEGY_TABLE_PAIR[row][elem] for player in Parents], weights)[0]
+    
+    return child
+                 
 
 #Takes in an array of the 4 victor players of the previous generation. Returns a array of the next generation
 def CrossOver(victors):
@@ -79,8 +151,6 @@ def CrossOver(victors):
                     player.STRATEGY_TABLE_PAIR[row][elem] = victors[3].STRATEGY_TABLE_PAIR[row][elem]
                  
     return new_generation
-
-
 
 
 
