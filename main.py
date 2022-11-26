@@ -14,6 +14,7 @@ import Dealer
 from Evolution import Evolve
 import time
 import concurrent.futures
+import multiprocessing.pool
 import multiprocessing as mp
 from multiprocessing import Queue
 import random
@@ -305,30 +306,30 @@ def play_hand(player, dealer):
             if player.hand[0] == 11:
                 action = player.STRATEGY_TABLE_PAIR["A-A"][dealer.hole_card]
                 #player.COUNT_TABLE_PAIR["A-A"][dealer.hole_card] += 1
-                #print("PAIR: A-A")
+                #print("PAIR: A-A\n")
 
             else:
                 value = str(int(player.total/2))
                 action = player.STRATEGY_TABLE_PAIR[value + "-" + value][dealer.hole_card]
                 #player.COUNT_TABLE_PAIR[value + "-" + value][dealer.hole_card] += 1
-                #print("PAIR: " + value + "-" + value)
+                #print("PAIR: " + value + "-" + value + "\n")
 
         # Soft Hand condition:
         elif player.hand[0] == 11:
             if player.hand[1] == 1:
                 action = player.STRATEGY_TABLE_SOFT_HAND["A-A"][dealer.hole_card]
                 #player.COUNT_TABLE_SOFT_HAND["A-A"][dealer.hole_card] += 1
-                #print("SOFT HAND: A-A")
+                #print("SOFT HAND: A-A\n")
 
             else:
                 action = player.STRATEGY_TABLE_SOFT_HAND["A-" + str(player.hand[1])][dealer.hole_card]
                 #player.COUNT_TABLE_SOFT_HAND["A-" + str(player.hand[1])][dealer.hole_card] += 1
-                #print("SOFT HAND: A-" + str(player.hand[1]))
+                #print("SOFT HAND: A-" + str(player.hand[1]) + "\n")
         # Hard hand condtion:
         else:
             action = player.STRATEGY_TABLE_HARD_HAND[player.hand[1]][dealer.hole_card]
             #player.COUNT_TABLE_HARD_HAND[player.hand[1]][dealer.hole_card] += 1
-            #print("HARD HAND: " + str(player.hand[1]))
+            #print("HARD HAND: " + str(player.hand[1]) + "\n")
            
         #action = input("Enter your action (H,S,D,P): ")
 
@@ -499,7 +500,7 @@ if __name__ == "__main__":
             population[i].hands_tied = 0
             population[i].hands_played = 0
             population[i].POOL = 1_000_000
-            population[i].LIMIT = 10_000
+            population[i].LIMIT = 100_000
 
         RESULTS = mp.Queue()
         FinishedGeneration = []
@@ -507,6 +508,7 @@ if __name__ == "__main__":
         Start = time.time()
         # loops through population
         processesRunning = False
+
         while i < len(population):
             # thread index is population % desired number of threads
             processIndex = i % num_processes
@@ -518,7 +520,7 @@ if __name__ == "__main__":
             if processIndex == num_processes-1:
                 for j in range(num_processes):
                     Processes[j].join()
-                    FinishedGeneration.append(RESULTS.get())
+                    FinishedGeneration.append(RESULTS.get(timeout = 20))
                     print("Process: " + str(i))
                     processesRunning = False
             i += 1
@@ -527,7 +529,7 @@ if __name__ == "__main__":
         if processesRunning == True:
             for j in range(processIndex + 1):
                 Processes[j].join()
-                FinishedGeneration.append(RESULTS.get())
+                FinishedGeneration.append(RESULTS.get(timeout = 20))
                 print("Process: " + str(i))
 
         End = time.time()
