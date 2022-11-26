@@ -472,9 +472,9 @@ def generate_inital_population(num_players):
 DECK = []
 OPTIMAL_PLAYER = None
 VICTOR_RESULTS_LIST = []
-POP_SIZE = 100
+POP_SIZE = 400
 num_processes = os.cpu_count()
-Processes = [None]*num_processes
+#Processes = [None]*num_processes
 
 
 if __name__ == "__main__":
@@ -508,18 +508,18 @@ if __name__ == "__main__":
         Start = time.time()
         # loops through population
         processesRunning = False
-
         while i < len(population):
+            Processes = []
             # thread index is population % desired number of threads
             processIndex = i % num_processes
             # play game through each thread and write result into RESULTS
-            Processes[processIndex] = mp.Process(target=play_game, args=(population[i],RESULTS,))
-            Processes[processIndex].start()
+            Processes.append(mp.Process(target=play_game, args=(population[i],RESULTS,)))
+            Processes[len(Processes)-1].start()
             processesRunning = True
             # if you reach the max number of threads, wait for all threads to finish
             if processIndex == num_processes-1:
                 for j in range(num_processes):
-                    Processes[j].join()
+                    #Processes[j].join()
                     FinishedGeneration.append(RESULTS.get(timeout = 20))
                     print("Process: " + str(i))
                     processesRunning = False
@@ -528,7 +528,7 @@ if __name__ == "__main__":
         # after looping through population, wait for remaining threads started before htting the (processIndex == num_processes-1) condition
         if processesRunning == True:
             for j in range(processIndex + 1):
-                Processes[j].join()
+                #Processes[j].join()
                 FinishedGeneration.append(RESULTS.get(timeout = 20))
                 print("Process: " + str(i))
 
