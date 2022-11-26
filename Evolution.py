@@ -102,7 +102,7 @@ def CrossOver(victors):
     w2 = ((victors[1].POOL / sum) + w1 / 100) * 100
     w3 = ((victors[2].POOL / sum) + w2 / 100) * 100 
       
-    players_per_generation = 5
+    players_per_generation = 100
     new_generation = []
     prev_gen_number = victors[0].generation
     new_gen_number = prev_gen_number + 1
