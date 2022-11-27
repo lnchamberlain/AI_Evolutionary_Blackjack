@@ -39,12 +39,11 @@ def TourneySelection(Generation, NextGeneration):
                i = tourneyNum
         # sort the players in the tournament
         Tourney.sort(key=lambda x: x.POOL, reverse=True)
-        # append the best to the next generation
-        NextGeneration.append(Tourney[0])
+        # append the best to the Selected
+        Selected.append(Tourney[0])
 
     # THIS FILLS THE REST OF THE GENERATION
     # make 2 copies of the selected generation
-    Selected = NextGeneration.copy()
     SelectedTemp = Selected.copy()
     # while the generation isn't full
     while len(NextGeneration) < POP_SIZE:
@@ -59,6 +58,7 @@ def TourneySelection(Generation, NextGeneration):
             parents.append(SelectedTemp.pop(randomChoice))
         
         NextGeneration.append(CrossOverTourney(parents))
+
 
 
 

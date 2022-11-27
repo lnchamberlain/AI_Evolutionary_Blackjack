@@ -136,8 +136,6 @@ def visualize_strategy_tables(player):
 
 #Fills in the global deck variable with 52 strings of the form "value of suit"
 def populate_deck():
-    global DECK
-    DECK = []
     SUITS = ["Hearts", "Diamonds", "Clubs", "Spades"]
     ROYALTY_AND_ACE = ["Ace", "King", "Queen", "Jack"]
     for i in range(2,11):
@@ -400,7 +398,7 @@ def evaluate_hands(player, dealer):
 
     #Plays a game with a player until 1000 hands or player pool is 0
 def play_game(player,RESULTS):
-    #populate_deck()
+    populate_deck()
     dealer = Dealer.dealer()
     while player.hands_played < player.LIMIT:
         deal(player, dealer)
@@ -487,7 +485,7 @@ if __name__ == "__main__":
     visualize_strategy_tables(OPTIMAL_PLAYER)
     population = generate_inital_population(POP_SIZE)
 
-    populate_deck()
+    
     # Running with Miltiprocessing
     ##################################################################################################
     # the mp.Queue() is how we extract individual process results
