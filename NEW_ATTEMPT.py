@@ -9,6 +9,7 @@
 #
 ################################################################################
 
+import poplib
 import Player
 import Dealer
 import Evolution
@@ -27,6 +28,7 @@ from PIL import Image, ImageFont, ImageDraw
 import os
 import time
 import threading
+import pickle
 
 
 #NOTE: The dealer has an infinite deck for the purposes of our algorithm
@@ -87,8 +89,15 @@ def _color_table(val):
     return 'background-color: %s' % color
 
 
-def visualize_strategy_tables(player):
-    path = "./Strategy Table Images/Generation " + str(player.generation) + "/"
+def visualize_strategy_tables(player, mode):
+    if(mode == "TOUR"):
+        path = "./Strategy Table Images/Tournament Selection/Generation " + str(player.generation) + "/"
+    elif(mode == "T4"):
+        path = "./Strategy Table Images/Top 4/Generation " + str(player.generation) + "/"
+    elif(mode == "M"):
+        path = "./Strategy Table Images/Mutation/Generation " + str(player.generation) + "/"
+    elif(mode == "OP"):
+        path = "./Strategy Table Images/Optimal Player/Generation " + str(player.generation) + "/"
     if not os.path.exists(path):
         os.makedirs(path)
     player_designation = str(player.player_number) + "_"
@@ -471,33 +480,76 @@ def generate_inital_population(num_players):
 
     return initial_population
 
+def save_current_population(pop, mode):
+    print("Saving current generation...")
+    if(mode == "TOUR"):
+        path = "./Population States/Tournament Selection/"
+    elif(mode == "T4"):
+        path = "./Population States/Top 4/"
+    elif(mode == "M"):
+        path = "./Population States/Mutation/"
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+    f = open(path+"pop.pickle", "wb")
+    pickle.dump(pop, f)
+
+
+def retrieve_population(mode):
+    print("Getting saved generation...")
+    if(mode == "TOUR"):
+        path = "./Population States/Tournament Selection/pop.pickle"
+    elif(mode == "T4"):
+        path = "./Population States/Top 4/pop.pickle"
+    elif(mode == "M"):
+        path = "./Population States/Mutation/pop.pickle"
+
+    #Return none if no saved population
+    if not os.path.exists(path):
+        return None
+    f = open(path, 'rb') 
+    pop = pickle.load(f)
+    return pop
+
 
 
 DECK = []
 OPTIMAL_PLAYER = None
 VICTOR_RESULTS_LIST = []
-POP_SIZE =100
+POP_SIZE = 400
 #num_processes = os.cpu_count()
 #Processes = [None]*num_processes
 
 
 if __name__ == "__main__":
+    mode = input("ENTER MODE TOURNAMENT (TOUR), TOP 4 (T4) or with Mutation (M): ")
+    if(mode != "M" and mode != "TOUR" and mode != "T4"):
+        mode = input("INVALID INPUT: ENTER MODE TOURNAMENT (TOUR), TOP 4 (T4) or with Mutation (M): ")
+
+    retrieve_saved = input("Retrieve saved population and resume? Enter mode of saved population, enter N to start new: ")
+    if(retrieve_saved == "N"):
+        print("Starting new...")
+        population = generate_inital_population(POP_SIZE)
+        GenerationNum = 0
+    elif(retrieve_saved == "TOUR"):
+        population = retrieve_population("TOUR")
+        GenerationNum = population[0].generation + 1
+    elif(retrieve_saved == "T4"):
+        population = retrieve_population("T4")
+        GenerationNum = population[0].generation + 1
+    elif(retrieve_saved == "M"):
+        population = retrieve_population("M")
+        GenerationNum = population[0].generation + 1
     OPTIMAL_PLAYER = Player.player()
     OPTIMAL_PLAYER.STRATEGY_TABLE_HARD_HAND = PROVEN_STRATEGY_TABLE_HARD_HAND
     OPTIMAL_PLAYER.STRATEGY_TABLE_SOFT_HAND = PROVEN_STRATEGY_TABLE_SOFT_HAND
     OPTIMAL_PLAYER.STRATEGY_TABLE_PAIR = PROVEN_STRATEGY_TABLE_PAIR
-    visualize_strategy_tables(OPTIMAL_PLAYER)
-    population = generate_inital_population(POP_SIZE)
-
-
+    visualize_strategy_tables(OPTIMAL_PLAYER, "OP")
+    populate_deck()
     
-    # Running with Miltiprocessing
-    ##################################################################################################
-    # the mp.Queue() is how we extract individual process results
-    GenerationNum = 0
-    while GenerationNum < 200:
+ 
+    while GenerationNum < 190:
         #Shuffle deck each generation, shouldn't matter but best practice
-        populate_deck()
         RESULTS = []
         #Fill in generation info and player numbers 
         for i in range(POP_SIZE):
@@ -565,7 +617,7 @@ if __name__ == "__main__":
             print(f"Generation {GenerationNum} Players Played: {len(RESULTS)}")
             
 
-           
+        save_current_population(population, mode)   
         Victors = []
         RESULTS.sort(key= lambda x:x.POOL, reverse= True)
         for player in RESULTS:
@@ -574,15 +626,19 @@ if __name__ == "__main__":
         print("Victors:")
         print(Victors)
         VICTOR_RESULTS_LIST.append(Victors)
-        population = Evolution.CrossOver(Victors)
+        if(mode == "T4"):
+            population = Evolution.CrossOver(Victors)
+        elif(mode == "TOUR"):
+            population = Evolution.Evolve(population)
+        '''
+        elif(mode == "M"):
+            population = Evolution MUTATION HERE
+        '''
         print(f"New Population is {population}")
         GenerationNum += 1
-
-
-
-    for gen in VICTOR_RESULTS_LIST:
-        for victor in gen:
-            visualize_strategy_tables(victor)
+        for gen in VICTOR_RESULTS_LIST:
+            for victor in gen:
+                visualize_strategy_tables(victor, mode)
             
         '''
         RESULTS = mp.Queue()
