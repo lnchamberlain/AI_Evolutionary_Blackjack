@@ -642,7 +642,7 @@ if __name__ == "__main__":
     # Running with Miltiprocessing
     ##################################################################################################
     # the mp.Queue() is how we extract individual process results
-    while GenerationNum < 100:
+    while GenerationNum < 200:
         RESULTS = mp.Queue()
         FinishedGeneration = []
         i = 0
@@ -681,7 +681,7 @@ if __name__ == "__main__":
         for results in FinishedGeneration:
             print(results.player_number, results.hands_won, results.hands_lost, results.hands_tied)
         # collect the victor "money lost per hand" stat
-        victor_lost_per_hand.append((FinishedGeneration[0].POOL - 1_000_000)/10_000)    
+        victor_lost_per_hand.append((FinishedGeneration[0].POOL - 1_000_000)/100_000)    
 
         visualize_strategy_tables(FinishedGeneration[0], mode)
         population = Evolve(FinishedGeneration)
@@ -690,9 +690,9 @@ if __name__ == "__main__":
             population[i].generation = GenerationNum
             population[i].player_number = i + 1
 
-    save_current_population(population, mode)
-    save_current_lps_data(victor_lost_per_hand, mode)
-    create_agent_performance_plot(victor_lost_per_hand, mode)
+        save_current_population(population, mode)
+        save_current_lps_data(victor_lost_per_hand, mode)
+        create_agent_performance_plot(victor_lost_per_hand, mode)
 
         # Running without Treads
         ##################################################################################################
