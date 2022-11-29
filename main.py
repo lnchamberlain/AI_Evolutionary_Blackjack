@@ -514,7 +514,7 @@ def retrieve_population(mode):
 DECK = []
 OPTIMAL_PLAYER = None
 VICTOR_RESULTS_LIST = []
-POP_SIZE = 50
+POP_SIZE = 400
 num_processes = os.cpu_count()
 #Processes = [None]*num_processes
 
@@ -551,7 +551,7 @@ if __name__ == "__main__":
     ##################################################################################################
     # the mp.Queue() is how we extract individual process results
     GenerationNum = 0
-    while GenerationNum < 5:
+    while GenerationNum < 200:
         #Fill in generation info and player numbers 
         for i in range(POP_SIZE):
             population[i].generation = GenerationNum
@@ -604,8 +604,9 @@ if __name__ == "__main__":
         victor_lost_per_hand.append((1_000_000 - FinishedGeneration[0].POOL)/10_000)    
 
         visualize_strategy_tables(FinishedGeneration[0], "TOUR")
+        save_current_population(FinishedGeneration, "TOUR")
         population = Evolve(FinishedGeneration)
-
+        print(len(population))
         GenerationNum +=1
 
     Gen = np.arange(0, GenerationNum, 1)

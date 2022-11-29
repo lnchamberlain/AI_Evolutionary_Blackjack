@@ -12,7 +12,7 @@
 
 import random
 import Player
-POP_SIZE = 50
+POP_SIZE = 400
 # number of payers chosen for each tournament
 tourneyNum = 4
 # number of parents to make a child 
