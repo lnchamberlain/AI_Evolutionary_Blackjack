@@ -12,36 +12,33 @@
 
 import random
 import Player
-
-POP_SIZE = 400
+POP_SIZE = 50
 # number of payers chosen for each tournament
 tourneyNum = 4
 # number of parents to make a child 
 numParents = 4
-
 def Evolve(Generation):
     NextGeneration = []
     # do whatever selection we want
     TourneySelection(Generation, NextGeneration)
     return NextGeneration
-
-
 def TourneySelection(Generation, NextGeneration):
     Selected = []
     # Create groups of players of size tourneyNum until the generation is empty
     while len(Generation) > 0:
         Tourney = []
         # choose, without replacement, random players from the generation 
-        for i in range(tourneyNum):
+        i = 0
+        while i < tourneyNum:
             randomChoice = random.randint(0, len(Generation)-1)
             Tourney.append(Generation.pop(randomChoice))
             if len(Generation) == 0:
                i = tourneyNum
+            i += 1
         # sort the players in the tournament
         Tourney.sort(key=lambda x: x.POOL, reverse=True)
         # append the best to the Selected
         Selected.append(Tourney[0])
-
     # THIS FILLS THE REST OF THE GENERATION
     # make 2 copies of the selected generation
     SelectedTemp = Selected.copy()

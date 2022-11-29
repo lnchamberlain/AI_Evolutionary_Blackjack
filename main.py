@@ -9,6 +9,7 @@
 #
 ################################################################################
 
+import poplib
 import Player
 import Dealer
 from Evolution import Evolve
@@ -19,6 +20,7 @@ import multiprocessing as mp
 from multiprocessing import Queue
 import random
 import sys
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import dataframe_image as dfi
@@ -26,6 +28,7 @@ import sys
 from PIL import Image, ImageFont, ImageDraw
 import os
 import time
+import pickle
 
 
 #NOTE: The dealer has an infinite deck for the purposes of our algorithm
@@ -47,7 +50,8 @@ PROVEN_STRATEGY_TABLE_HARD_HAND = {20:{2:"S", 3:"S", 4:"S", 5:"S", 6:"S", 7:"S",
                               8:{2:"H", 3:"H", 4:"H", 5:"H", 6:"H", 7:"H", 8:"H", 9:"H", 10:"H", "Ace":"H"},
                               7:{2:"H", 3:"H", 4:"H", 5:"H", 6:"H", 7:"H", 8:"H", 9:"H", 10:"H", "Ace":"H"},
                               6:{2:"H", 3:"H", 4:"H", 5:"H", 6:"H", 7:"H", 8:"H", 9:"H", 10:"H", "Ace":"H"},
-                              5:{2:"H", 3:"H", 4:"H", 5:"H", 6:"H", 7:"H", 8:"H", 9:"H", 10:"H", "Ace":"H"}}
+                              5:{2:"H", 3:"H", 4:"H", 5:"H", 6:"H", 7:"H", 8:"H", 9:"H", 10:"H", "Ace":"H"},
+                              4:{2:"H", 3:"H", 4:"H", 5:"H", 6:"H", 7:"H", 8:"H", 9:"H", 10:"H", "Ace":"H"}}
                              
 PROVEN_STRATEGY_TABLE_SOFT_HAND = {"A-9":{2:"S", 3:"S", 4:"S", 5:"S", 6:"S", 7:"S", 8:"S", 9:"S", 10:"S", "Ace":"S"}, 
                                    "A-8":{2:"S", 3:"S", 4:"S", 5:"S", 6:"D", 7:"S", 8:"S", 9:"S", 10:"S", "Ace":"S"},
@@ -59,7 +63,7 @@ PROVEN_STRATEGY_TABLE_SOFT_HAND = {"A-9":{2:"S", 3:"S", 4:"S", 5:"S", 6:"S", 7:"
                                    "A-2":{2:"H", 3:"H", 4:"H", 5:"D", 6:"D", 7:"H", 8:"H", 9:"H", 10:"H", "Ace":"H"}}
 
 PROVEN_STRATEGY_TABLE_PAIR = {"A-A":{2:"P", 3:"P", 4:"P", 5:"P", 6:"P", 7:"P", 8:"P", 9:"P", 10:"P", "Ace":"P"}, 
-                                   "T-T":{2:"S", 3:"S", 4:"S", 5:"S", 6:"S", 7:"S", 8:"S", 9:"S", 10:"S", "Ace":"S"},
+                                   "10-10":{2:"S", 3:"S", 4:"S", 5:"S", 6:"S", 7:"S", 8:"S", 9:"S", 10:"S", "Ace":"S"},
                                    "9-9":{2:"P", 3:"P", 4:"P", 5:"P", 6:"P", 7:"S", 8:"P", 9:"P", 10:"S", "Ace":"S"},
                                    "8-8":{2:"P", 3:"P", 4:"P", 5:"P", 6:"P", 7:"P", 8:"P", 9:"P", 10:"P","Ace":"P"},
                                    "7-7":{2:"P", 3:"P", 4:"P", 5:"P", 6:"P", 7:"P", 8:"H", 9:"H", 10:"H", "Ace":"H"},
@@ -86,8 +90,15 @@ def _color_table(val):
     return 'background-color: %s' % color
 
 
-def visualize_strategy_tables(player):
-    path = "./Strategy Table Images/Generation " + str(player.generation) + "/"
+def visualize_strategy_tables(player, mode):
+    if(mode == "TOUR"):
+        path = "./Strategy Table Images/Tournament Selection/Generation " + str(player.generation) + "/"
+    elif(mode == "T4"):
+        path = "./Strategy Table Images/Top 4/Generation " + str(player.generation) + "/"
+    elif(mode == "M"):
+        path = "./Strategy Table Images/Mutation/Generation " + str(player.generation) + "/"
+    elif(mode == "OP"):
+        path = "./Strategy Table Images/Optimal Player/Generation " + str(player.generation) + "/"
     if not os.path.exists(path):
         os.makedirs(path)
     player_designation = str(player.player_number) + "_"
@@ -468,29 +479,79 @@ def generate_inital_population(num_players):
     return initial_population
 
 
+def save_current_population(pop, mode):
+    print("Saving current generation...")
+    if(mode == "TOUR"):
+        path = "./Population States/Tournament Selection/"
+    elif(mode == "T4"):
+        path = "./Population States/Top 4/"
+    elif(mode == "M"):
+        path = "./Population States/Mutation/"
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+    f = open(path+"pop.pickle", "wb")
+    pickle.dump(pop, f)
+
+
+def retrieve_population(mode):
+    print("Getting saved generation...")
+    if(mode == "TOUR"):
+        path = "./Population States/Tournament Selection/pop.pickle"
+    elif(mode == "T4"):
+        path = "./Population States/Top 4/pop.pickle"
+    elif(mode == "M"):
+        path = "./Population States/Mutation/pop.pickle"
+
+    #Return none if no saved population
+    if not os.path.exists(path):
+        return None
+    f = open(path, 'rb') 
+    pop = pickle.load(f)
+    return pop
+
 
 DECK = []
 OPTIMAL_PLAYER = None
 VICTOR_RESULTS_LIST = []
-POP_SIZE = 400
+POP_SIZE = 50
 num_processes = os.cpu_count()
 #Processes = [None]*num_processes
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":    
+    mode = input("ENTER MODE TOURNAMENT (TOUR), TOP 4 (T4) or with Mutation (M): ")
+    if(mode != "M" and mode != "TOUR" and mode != "T4"):
+        mode = input("INVALID INPUT: ENTER MODE TOURNAMENT (TOUR), TOP 4 (T4) or with Mutation (M): ")
+
+    retrieve_saved = input("Retrieve saved population and resume? Enter mode of saved population, enter N to start new: ")
+    if(retrieve_saved == "N"):
+        print("Starting new...")
+        population = generate_inital_population(POP_SIZE)
+        GenerationNum = 0
+    elif(retrieve_saved == "TOUR"):
+        population = retrieve_population("TOUR")
+        GenerationNum = population[0].generation + 1
+    elif(retrieve_saved == "T4"):
+        population = retrieve_population("T4")
+        GenerationNum = population[0].generation + 1
+    elif(retrieve_saved == "M"):
+        population = retrieve_population("M")
+        GenerationNum = population[0].generation + 1
     OPTIMAL_PLAYER = Player.player()
     OPTIMAL_PLAYER.STRATEGY_TABLE_HARD_HAND = PROVEN_STRATEGY_TABLE_HARD_HAND
     OPTIMAL_PLAYER.STRATEGY_TABLE_SOFT_HAND = PROVEN_STRATEGY_TABLE_SOFT_HAND
     OPTIMAL_PLAYER.STRATEGY_TABLE_PAIR = PROVEN_STRATEGY_TABLE_PAIR
-    visualize_strategy_tables(OPTIMAL_PLAYER)
-    population = generate_inital_population(POP_SIZE)
-
+    visualize_strategy_tables(OPTIMAL_PLAYER, "OP")
     
+    victor_lost_per_hand = []
+    OP_lost_per_hand = 0.0144
+
     # Running with Miltiprocessing
     ##################################################################################################
     # the mp.Queue() is how we extract individual process results
     GenerationNum = 0
-    while GenerationNum < 200:
+    while GenerationNum < 5:
         #Fill in generation info and player numbers 
         for i in range(POP_SIZE):
             population[i].generation = GenerationNum
@@ -500,7 +561,7 @@ if __name__ == "__main__":
             population[i].hands_tied = 0
             population[i].hands_played = 0
             population[i].POOL = 1_000_000
-            population[i].LIMIT = 100_000
+            population[i].LIMIT = 10_000
 
         RESULTS = mp.Queue()
         FinishedGeneration = []
@@ -531,21 +592,31 @@ if __name__ == "__main__":
                 #Processes[j].join()
                 FinishedGeneration.append(RESULTS.get(timeout = 20))
                 print("Process: " + str(i))
-
+        # print time elapsed to finish generation
         End = time.time()
-
+        print("Time: " + str(End-Start))
+        # Sort the finished generation by pool for evoluation
         FinishedGeneration.sort(key=lambda x: x.POOL, reverse=True)
-
+        # print the results
         for results in FinishedGeneration:
             print(results.player_number, results.hands_won, results.hands_lost, results.hands_tied)
+        # collect the victor "money lost per hand" stat
+        victor_lost_per_hand.append((1_000_000 - FinishedGeneration[0].POOL)/10_000)    
 
-        print("Time: " + str(End-Start))
-
-        visualize_strategy_tables(FinishedGeneration[0])
+        visualize_strategy_tables(FinishedGeneration[0], "TOUR")
         population = Evolve(FinishedGeneration)
 
         GenerationNum +=1
 
+    Gen = np.arange(0, GenerationNum, 1)
+    OP_plot = []
+    for i in range(GenerationNum):
+        OP_plot.append(0.0144)
+
+    plt.plot(Gen, victor_lost_per_hand, label = "Agent")
+    plt.plot(Gen, OP_plot, label = "Optimal")
+    plt.legend()
+    plt.savefig('Performance_Measure.png')
         # Running without Treads
         ##################################################################################################
     '''
@@ -557,12 +628,14 @@ if __name__ == "__main__":
     i = 0
     Start = time.time()
     populate_deck()
-    for player in population:
-        play_game(player, RESULTS)
-        print(str(player.player_number) + " " + str(player.hands_played))
+    for players in population:
+        play_game(players, RESULTS)
+    print(str(population[0].player_number) + " " + str(population[0].hands_played))
+    for players in population:
+        print(str(10_000_000 - players.POOL))
     End = time.time()
-    for results in RESULTS:
-        print(results.player_number, results.hands_won, results.hands_lost, results.hands_tied)
+    print(population[0].player_number, population[0].hands_won, population[0].hands_lost, population[0].hands_tied)
     print("Time: " + str(End-Start))
     '''
+
         
