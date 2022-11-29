@@ -12,9 +12,9 @@
 
 import random
 import Player
-POP_SIZE = 50
+POP_SIZE = 400
 # number of payers chosen for each tournament
-tourneyNum = 4
+tourneyNum = 2
 # number of parents to make a child 
 numParents = 4
 def Evolve(Generation):

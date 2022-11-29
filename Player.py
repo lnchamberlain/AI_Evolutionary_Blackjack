@@ -101,7 +101,7 @@ class player():
         self.hands_lost = 0
         self.hands_tied = 0
         self.POOL = 1_000_000
-        self.LIMIT = 10_000
+        self.LIMIT = 100_000
         self.generation = 0
         self.player_number = 0
         # reset after every hand

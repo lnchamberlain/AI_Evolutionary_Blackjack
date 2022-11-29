@@ -91,8 +91,12 @@ def _color_table(val):
 
 
 def visualize_strategy_tables(player, mode):
-    if(mode == "TOUR"):
-        path = "./Strategy Table Images/Tournament Selection/Generation " + str(player.generation) + "/"
+    if(mode == "TOUR2"):
+        path = "./Strategy Table Images/Tournament Selection 2/Generation " + str(player.generation) + "/"
+    elif(mode == "TOUR3"):
+        path = "./Strategy Table Images/Tournament Selection 3/Generation " + str(player.generation) + "/"
+    elif(mode == "TOUR4"):
+        path = "./Strategy Table Images/Tournament Selection 4/Generation " + str(player.generation) + "/"
     elif(mode == "T4"):
         path = "./Strategy Table Images/Top 4/Generation " + str(player.generation) + "/"
     elif(mode == "M"):
@@ -461,6 +465,7 @@ def generate_inital_population(num_players):
     initial_population = []
     for i in range(num_players):
         initial_population.append(Player.player())
+        initial_population[i].player_number = i + 1
 
     for player in initial_population:
         #Fill Hard hand table
@@ -481,8 +486,12 @@ def generate_inital_population(num_players):
 
 def save_current_population(pop, mode):
     print("Saving current generation...")
-    if(mode == "TOUR"):
-        path = "./Population States/Tournament Selection/"
+    if(mode == "TOUR2"):
+        path = "./Population States/Tournament Selection 2/"
+    elif(mode == "TOUR3"):
+        path = "./Population States/Tournament Selection 3/"
+    elif(mode == "TOUR4"):
+        path = "./Population States/Tournament Selection 4/"
     elif(mode == "T4"):
         path = "./Population States/Top 4/"
     elif(mode == "M"):
@@ -490,14 +499,42 @@ def save_current_population(pop, mode):
     if not os.path.exists(path):
         os.makedirs(path)
 
-    f = open(path+"pop.pickle", "wb")
-    pickle.dump(pop, f)
+    file_pop = open(path+"pop.pickle", "wb")
+    pickle.dump(pop, file_pop)
+
+    #loss per hand data
+    file_LPH = open(path+"lph.pickle", "wb")
+    pickle.dump(pop, file_LPH)
+
+
+def save_current_lps_data(lps_data, mode):
+    print("Saving agent performance measure generation...")
+    if(mode == "TOUR2"):
+        path = "./Population States/Tournament Selection 2/"
+    elif(mode == "TOUR3"):
+        path = "./Population States/Tournament Selection 3/"
+    elif(mode == "TOUR4"):
+        path = "./Population States/Tournament Selection 4/"
+    elif(mode == "T4"):
+        path = "./Population States/Top 4/"
+    elif(mode == "M"):
+        path = "./Population States/Mutation/"
+    if not os.path.exists(path):
+        os.makedirs(path)
+    #loss per hand data
+    f = open(path+"lph.pickle", "wb")
+    pickle.dump(lps_data, f)
+
 
 
 def retrieve_population(mode):
     print("Getting saved generation...")
-    if(mode == "TOUR"):
-        path = "./Population States/Tournament Selection/pop.pickle"
+    if(mode == "TOUR2"):
+        path = "./Population States/Tournament Selection 2/pop.pickle"
+    elif(mode == "TOUR3"):
+        path = "./Population States/Tournament Selection 3/pop.pickle"
+    elif(mode == "TOUR4"):
+        path = "./Population States/Tournament Selection 4/pop.pickle"
     elif(mode == "T4"):
         path = "./Population States/Top 4/pop.pickle"
     elif(mode == "M"):
@@ -510,59 +547,102 @@ def retrieve_population(mode):
     pop = pickle.load(f)
     return pop
 
+def retrieve_lps_data(mode):
+    print("Getting saved agent performance measure...")
+    if(mode == "TOUR2"):
+        path = "./Population States/Tournament Selection 2/lph.pickle"
+    elif(mode == "TOUR3"):
+        path = "./Population States/Tournament Selection 3/lph.pickle"
+    elif(mode == "TOUR4"):
+        path = "./Population States/Tournament Selection 4/lph.pickle"
+    elif(mode == "T4"):
+        path = "./Population States/Top 4/lph.pickle"
+    elif(mode == "M"):
+        path = "./Population States/Mutation/lph.pickle"
+
+    #Return none if no saved population
+    if not os.path.exists(path):
+        return None
+    f = open(path, 'rb') 
+    lps_data = pickle.load(f)
+    return lps_data
+
+
+def create_agent_performance_plot(victor_lost_per_hand, mode):
+    if(mode == "TOUR2"):
+        path = "./Performance Measure/Tournament Selection 2/"
+    elif(mode == "TOUR3"):
+        path = "./Performance Measure/Tournament Selection 3/"
+    elif(mode == "TOUR4"):
+        path = "./Performance Measure/Tournament Selection 4/"
+    elif(mode == "T4"):
+        path = "./Performance Measure/Top 4/"
+    elif(mode == "M"):
+        path = "./Performance Measure/Mutation/"
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+    Gen = np.arange(0, GenerationNum, 1)
+    OP_plot = []
+    for i in range(len(victor_lost_per_hand)):
+        OP_plot.append(0.0144)
+
+    plt.plot(Gen, victor_lost_per_hand, label = "Agent")
+    plt.plot(Gen, OP_plot, label = "Optimal")
+    plt.legend()
+    plt.savefig(path+'Performance_Measure2.png')
+
+
 
 DECK = []
 OPTIMAL_PLAYER = None
 VICTOR_RESULTS_LIST = []
-POP_SIZE = 50
+POP_SIZE = 400
 num_processes = os.cpu_count()
 #Processes = [None]*num_processes
 
 
 if __name__ == "__main__":    
-    mode = input("ENTER MODE TOURNAMENT (TOUR), TOP 4 (T4) or with Mutation (M): ")
-    if(mode != "M" and mode != "TOUR" and mode != "T4"):
-        mode = input("INVALID INPUT: ENTER MODE TOURNAMENT (TOUR), TOP 4 (T4) or with Mutation (M): ")
+    mode = input("ENTER MODE TOURNAMENT (TOUR2, TOUR3, TOUR4), TOP 4 (T4) or with Mutation (M): ")
+    if(mode != "M" and mode != "TOUR2" and mode != "TOUR3" and mode != "TOUR4" and mode != "T4"):
+        mode = input("INVALID INPUT: ENTER MODE TOURNAMENT (TOUR2, TOUR3, TOUR4), TOP 4 (T4) or with Mutation (M): ")
 
     retrieve_saved = input("Retrieve saved population and resume? Enter mode of saved population, enter N to start new: ")
     if(retrieve_saved == "N"):
         print("Starting new...")
         population = generate_inital_population(POP_SIZE)
         GenerationNum = 0
-    elif(retrieve_saved == "TOUR"):
-        population = retrieve_population("TOUR")
-        GenerationNum = population[0].generation + 1
+        victor_lost_per_hand = []
+    elif(retrieve_saved == "TOUR2"):
+        population = retrieve_population("TOUR2")
+        victor_lost_per_hand = retrieve_lps_data("TOUR2")
+        GenerationNum = population[0].generation
+    elif(retrieve_saved == "TOUR3"):
+        population = retrieve_population("TOUR3")
+        victor_lost_per_hand = retrieve_lps_data("TOUR3")
+        GenerationNum = population[0].generation
+    elif(retrieve_saved == "TOUR4"):
+        population = retrieve_population("TOUR4")
+        victor_lost_per_hand = retrieve_lps_data("TOUR4")
+        GenerationNum = population[0].generation
     elif(retrieve_saved == "T4"):
         population = retrieve_population("T4")
-        GenerationNum = population[0].generation + 1
+        GenerationNum = population[0].generation
     elif(retrieve_saved == "M"):
         population = retrieve_population("M")
-        GenerationNum = population[0].generation + 1
+        GenerationNum = population[0].generation
     OPTIMAL_PLAYER = Player.player()
     OPTIMAL_PLAYER.STRATEGY_TABLE_HARD_HAND = PROVEN_STRATEGY_TABLE_HARD_HAND
     OPTIMAL_PLAYER.STRATEGY_TABLE_SOFT_HAND = PROVEN_STRATEGY_TABLE_SOFT_HAND
     OPTIMAL_PLAYER.STRATEGY_TABLE_PAIR = PROVEN_STRATEGY_TABLE_PAIR
     visualize_strategy_tables(OPTIMAL_PLAYER, "OP")
     
-    victor_lost_per_hand = []
     OP_lost_per_hand = 0.0144
 
     # Running with Miltiprocessing
     ##################################################################################################
     # the mp.Queue() is how we extract individual process results
-    GenerationNum = 0
-    while GenerationNum < 5:
-        #Fill in generation info and player numbers 
-        for i in range(POP_SIZE):
-            population[i].generation = GenerationNum
-            population[i].player_number = i + 1
-            population[i].hands_won = 0
-            population[i].hands_lost = 0
-            population[i].hands_tied = 0
-            population[i].hands_played = 0
-            population[i].POOL = 1_000_000
-            population[i].LIMIT = 10_000
-
+    while GenerationNum < 100:
         RESULTS = mp.Queue()
         FinishedGeneration = []
         i = 0
@@ -601,22 +681,19 @@ if __name__ == "__main__":
         for results in FinishedGeneration:
             print(results.player_number, results.hands_won, results.hands_lost, results.hands_tied)
         # collect the victor "money lost per hand" stat
-        victor_lost_per_hand.append((1_000_000 - FinishedGeneration[0].POOL)/10_000)    
+        victor_lost_per_hand.append((FinishedGeneration[0].POOL - 1_000_000)/10_000)    
 
-        visualize_strategy_tables(FinishedGeneration[0], "TOUR")
+        visualize_strategy_tables(FinishedGeneration[0], mode)
         population = Evolve(FinishedGeneration)
-
         GenerationNum +=1
+        for i in range(POP_SIZE):
+            population[i].generation = GenerationNum
+            population[i].player_number = i + 1
 
-    Gen = np.arange(0, GenerationNum, 1)
-    OP_plot = []
-    for i in range(GenerationNum):
-        OP_plot.append(0.0144)
+    save_current_population(population, mode)
+    save_current_lps_data(victor_lost_per_hand, mode)
+    create_agent_performance_plot(victor_lost_per_hand, mode)
 
-    plt.plot(Gen, victor_lost_per_hand, label = "Agent")
-    plt.plot(Gen, OP_plot, label = "Optimal")
-    plt.legend()
-    plt.savefig('Performance_Measure.png')
         # Running without Treads
         ##################################################################################################
     '''
