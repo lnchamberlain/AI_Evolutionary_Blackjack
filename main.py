@@ -12,6 +12,7 @@
 import poplib
 import Player
 import Dealer
+from TestingAgent import TestingAgent
 import Evolution
 import time
 import concurrent.futures
@@ -92,17 +93,17 @@ def _color_table(val):
 
 def visualize_strategy_tables(player, mode):
     if(mode == "TOUR2"):
-        path = "./Strategy Table Images/Tournament Selection 2/Generation " + str(player.generation) + "/"
+        path = "./Strategy Table Images/Tournament Selection 2/"
     elif(mode == "TOUR3"):
-        path = "./Strategy Table Images/Tournament Selection 3/Generation " + str(player.generation) + "/"
+        path = "./Strategy Table Images/Tournament Selection 3/"
     elif(mode == "TOUR4"):
-        path = "./Strategy Table Images/Tournament Selection 4/Generation " + str(player.generation) + "/"
+        path = "./Strategy Table Images/Tournament Selection 4/"
     elif(mode == "T4"):
-        path = "./Strategy Table Images/Top 4/Generation " + str(player.generation) + "/"
+        path = "./Strategy Table Images/Top 4//"
     elif(mode == "M"):
-        path = "./Strategy Table Images/Mutation/Generation " + str(player.generation) + "/"
+        path = "./Strategy Table Images/Mutation/"
     elif(mode == "OP"):
-        path = "./Strategy Table Images/Optimal Player/Generation " + str(player.generation) + "/"
+        path = "./Strategy Table Images/Optimal Player/"
     if not os.path.exists(path):
         os.makedirs(path)
     player_designation = str(player.player_number) + "_"
@@ -141,7 +142,7 @@ def visualize_strategy_tables(player, mode):
             all_tables.paste(info_img, (x_offset + 300, 400))
             PASTED_INFO = True
         x_offset += im.size[0]
-    file_name = path + "PLAYER " + str(player.player_number) + " RESULTS.png"
+    file_name = path + "Generation " + str(player.generation) + ".png"
     all_tables.save(file_name)
     os.remove(path+player_designation+"hard_hand.png")
     os.remove(path+player_designation+"soft_hand.png")
@@ -585,11 +586,16 @@ def create_agent_performance_plot(victor_lost_per_hand, mode):
     Gen = np.arange(0, GenerationNum, 1)
     OP_plot = []
     for i in range(len(victor_lost_per_hand)):
-        OP_plot.append(0.0144)
+        OP_plot.append(-0.0144)
 
     plt.plot(Gen, victor_lost_per_hand, label = "Agent")
     plt.plot(Gen, OP_plot, label = "Optimal")
-    plt.legend()
+    plt.xlabel('Generations')
+    plt.ylabel('$ lost per hand')
+  
+    # naming the title of the plot
+    plt.title('Performance Measure: Tournament 2')
+    plt.legend(loc='lower right')
     plt.savefig(path+'Performance_Measure2.png')
 
 
@@ -637,12 +643,10 @@ if __name__ == "__main__":
     OPTIMAL_PLAYER.STRATEGY_TABLE_PAIR = PROVEN_STRATEGY_TABLE_PAIR
     visualize_strategy_tables(OPTIMAL_PLAYER, "OP")
     
-    OP_lost_per_hand = 0.0144
-
     # Running with Miltiprocessing
     ##################################################################################################
     # the mp.Queue() is how we extract individual process results
-    while GenerationNum < 25:
+    while GenerationNum < 201:
         RESULTS = mp.Queue()
         FinishedGeneration = []
         i = 0
@@ -677,26 +681,40 @@ if __name__ == "__main__":
         print("Time: " + str(End-Start))
         # Sort the finished generation by pool for evoluation
         FinishedGeneration.sort(key=lambda x: x.POOL, reverse=True)
-        Victors = FinishedGeneration[0:4]
         # print the results
         for results in FinishedGeneration:
             print(results.player_number, results.hands_won, results.hands_lost, results.hands_tied)
         # collect the victor "money lost per hand" stat
         victor_lost_per_hand.append((FinishedGeneration[0].POOL - 1_000_000)/100_000)    
-
         visualize_strategy_tables(FinishedGeneration[0], mode)
+
+        # UNCOMMENT THIS WHEN DONE TO TEST THE TOP AGENT FROM THE POPULATION
+        #TestingAgent(FinishedGeneration[0])
+
         if(mode == 'T4'):
+            Victors = FinishedGeneration[0:4]
             population = Evolution.CrossOver(Victors)
         else:
             population = Evolution.Evolve(FinishedGeneration)
+
         GenerationNum +=1
+
         for i in range(POP_SIZE):
             population[i].generation = GenerationNum
             population[i].player_number = i + 1
+            population[i].hands_played = 0
+            population[i].hands_won = 0
+            population[i].hands_lost = 0
+            population[i].hands_tied = 0
+            population[i].POOL = 1_000_000
+            population[i].LIMIT = 100_000
 
+
+        create_agent_performance_plot(victor_lost_per_hand, mode)
         save_current_population(population, mode)
         save_current_lps_data(victor_lost_per_hand, mode)
-        create_agent_performance_plot(victor_lost_per_hand, mode)
+
+
 
         # Running without Treads
         ##################################################################################################
