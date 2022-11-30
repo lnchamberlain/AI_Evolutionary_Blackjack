@@ -12,7 +12,7 @@
 import poplib
 import Player
 import Dealer
-from Evolution import Evolve
+import Evolution
 import time
 import concurrent.futures
 import multiprocessing.pool
@@ -642,7 +642,7 @@ if __name__ == "__main__":
     # Running with Miltiprocessing
     ##################################################################################################
     # the mp.Queue() is how we extract individual process results
-    while GenerationNum < 200:
+    while GenerationNum < 25:
         RESULTS = mp.Queue()
         FinishedGeneration = []
         i = 0
@@ -677,6 +677,7 @@ if __name__ == "__main__":
         print("Time: " + str(End-Start))
         # Sort the finished generation by pool for evoluation
         FinishedGeneration.sort(key=lambda x: x.POOL, reverse=True)
+        Victors = FinishedGeneration[0:4]
         # print the results
         for results in FinishedGeneration:
             print(results.player_number, results.hands_won, results.hands_lost, results.hands_tied)
@@ -684,7 +685,10 @@ if __name__ == "__main__":
         victor_lost_per_hand.append((FinishedGeneration[0].POOL - 1_000_000)/100_000)    
 
         visualize_strategy_tables(FinishedGeneration[0], mode)
-        population = Evolve(FinishedGeneration)
+        if(mode == 'T4'):
+            population = Evolution.CrossOver(Victors)
+        else:
+            population = Evolution.Evolve(FinishedGeneration)
         GenerationNum +=1
         for i in range(POP_SIZE):
             population[i].generation = GenerationNum
