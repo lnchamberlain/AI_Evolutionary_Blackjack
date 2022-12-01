@@ -99,7 +99,7 @@ def visualize_strategy_tables(player, mode):
     elif(mode == "TOUR4"):
         path = "./Strategy Table Images/Tournament Selection 4/"
     elif(mode == "T4"):
-        path = "./Strategy Table Images/Top 4//"
+        path = "./Strategy Table Images/Top 4/"
     elif(mode == "M"):
         path = "./Strategy Table Images/Mutation/"
     elif(mode == "OP"):
@@ -646,7 +646,7 @@ if __name__ == "__main__":
     # Running with Miltiprocessing
     ##################################################################################################
     # the mp.Queue() is how we extract individual process results
-    while GenerationNum < 201:
+    while GenerationNum < 25:
         RESULTS = mp.Queue()
         FinishedGeneration = []
         i = 0
