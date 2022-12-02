@@ -302,6 +302,7 @@ def play_game(player):
             print(str(player.hands_played))
         deal(player, dealer)
         #print("Dealer Hand: {}".format(player.dealer_hand[0]))
+        result = None
         result = check_naturals(player, dealer)
         if not result:
             play_hand(player, dealer)
@@ -333,7 +334,7 @@ DECK = []
 
 def TestingAgent(player):    
     player.POOL = 10_000_000
-    player.LIMIT = 10_000_000
+    player.LIMIT = 10_0_000
     player.hands_played = 0
     player.hands_won = 0
     player.hands_tied = 0
@@ -341,7 +342,7 @@ def TestingAgent(player):
     populate_deck()
     play_game(player)
     print("$ Lost Per hand (Optimal = -$0.0144): " + str((player.POOL - 10_000_000) / 10_000_000))
-    print("Hands Won: "  + str(player.hands_won) + "  Hands Lost: "  + str(player.hands_won) + "  Hands Tied: "   + str(player.hands_tied))
+    print("Hands Won: "  + str(player.hands_won) + "  Hands Lost: "  + str(player.hands_lost) + "  Hands Tied: "   + str(player.hands_tied))
 
 
         

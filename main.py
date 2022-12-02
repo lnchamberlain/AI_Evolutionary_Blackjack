@@ -594,9 +594,9 @@ def create_agent_performance_plot(victor_lost_per_hand, mode):
     plt.ylabel('$ lost per hand')
   
     # naming the title of the plot
-    plt.title('Performance Measure: Tournament 2')
+    plt.title('Performance Measure: Tournament 3')
     plt.legend(loc='lower right')
-    plt.savefig(path+'Performance_Measure2.png')
+    plt.savefig(path+'Performance_Measure3.png')
 
 
 
@@ -646,7 +646,7 @@ if __name__ == "__main__":
     # Running with Miltiprocessing
     ##################################################################################################
     # the mp.Queue() is how we extract individual process results
-    while GenerationNum < 201:
+    while GenerationNum < 202:
         RESULTS = mp.Queue()
         FinishedGeneration = []
         i = 0
@@ -689,7 +689,7 @@ if __name__ == "__main__":
         visualize_strategy_tables(FinishedGeneration[0], mode)
 
         # UNCOMMENT THIS WHEN DONE TO TEST THE TOP AGENT FROM THE POPULATION
-        #TestingAgent(FinishedGeneration[0])
+        TestingAgent(FinishedGeneration[0])
 
         if(mode == 'T4'):
             Victors = FinishedGeneration[0:4]
@@ -708,7 +708,6 @@ if __name__ == "__main__":
             population[i].hands_tied = 0
             population[i].POOL = 1_000_000
             population[i].LIMIT = 100_000
-
 
         create_agent_performance_plot(victor_lost_per_hand, mode)
         save_current_population(population, mode)
