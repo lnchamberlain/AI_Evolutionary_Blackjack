@@ -153,7 +153,41 @@ def CrossOver(victors):
 
 
 def Mutation(child):
-    print("STUB")
+    choices = ["H","S","D"]
+    pair_choices = ["H","S","D","P"]
+    card_value = [2,3,4,5,6,7,8,9,10,"Ace"]
+    values_soft_hand = ["A-9","A-8", "A-7", "A-6", "A-5", "A-4", "A-3", "A-2"]
+    values_pair = ["A-A", "10-10", "9-9", "8-8", "7-7", "6-6", "5-5", "4-4", "3-3", "2-2"]
+
+    # mutatoion rate in percentage - set to 5%
+    percentage_mutation = 5
+    hard_hand = math.floor(170*(percentage_mutation/100))
+    soft_hand = math.floor(80*(percentage_mutation/100))
+    pair_hand = math.floor(100*(percentage_mutation/100))
+
+
+    # hard hands
+    for i in range(hard_hand):
+        row = random.randint(4,20)
+        elem = random.choice(card_value)
+        interchange = random.choice(choices)
+        child.STRATEGY_TABLE_HARD_HAND[row][elem] = interchange
+    
+    # soft hands
+    for i in range(soft_hand):
+        row = random.randint(values_soft_hand)
+        elem = random.choice(card_value)
+        interchange = random.choice(choices)
+        child.STRATEGY_TABLE_SOFT_HAND[row][elem] = interchange
+
+    # pair hands
+    for i in range(pair_hand):
+        row = random.randint(values_pair)
+        elem = random.choice(card_value)
+        interchange = random.choice(pair_choices)
+        child.STRATEGY_TABLE_PAIR[row][elem] = interchange
+        
+    return child
 
 
 #IGNORE THE BELOW, USED IT TO GENERATE THE CROSS OVER DEMO IMAGES
