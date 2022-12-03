@@ -12,6 +12,7 @@
 
 import random
 import Player
+import math
 POP_SIZE = 400
 # number of payers chosen for each tournament
 tourneyNum = 3
@@ -175,14 +176,14 @@ def Mutation(child):
     
     # soft hands
     for i in range(soft_hand):
-        row = random.randint(values_soft_hand)
+        row = random.choice(values_soft_hand)
         elem = random.choice(card_value)
         interchange = random.choice(choices)
         child.STRATEGY_TABLE_SOFT_HAND[row][elem] = interchange
 
     # pair hands
     for i in range(pair_hand):
-        row = random.randint(values_pair)
+        row = random.choice(values_pair)
         elem = random.choice(card_value)
         interchange = random.choice(pair_choices)
         child.STRATEGY_TABLE_PAIR[row][elem] = interchange
